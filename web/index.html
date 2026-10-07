@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f5f2" />
+    <title>G30 Gateway</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="is-disconnected">
+    <main class="shell">
+      <header class="app-bar">
+        <div class="identity"><strong>G30 GATEWAY</strong><span id="gateway-detail">Port 8080</span></div>
+        <div class="connection-strip" aria-label="Gateway and Grainfather status">
+          <span id="gateway-status" class="status-mark pending">Gateway connecting</span>
+          <span id="g30-status" class="status-mark muted">G30 unknown</span>
+          <span id="freshness" class="status-meta">Waiting for state…</span>
+          <span id="rssi" class="status-meta">-- dBm</span>
+          <div class="connection-actions">
+            <button id="alert-enable" type="button" class="button-quiet">Enable alerts</button>
+            <button id="connect">Scan &amp; connect</button>
+            <button id="disconnect" class="button-danger">Disconnect</button>
+          </div>
+        </div>
+      </header>
+
+      <p id="message" class="message hidden" role="status" aria-live="polite"></p>
+      <div id="temperature-alert" class="temperature-alert hidden" role="alert" aria-live="assertive">
+        <strong id="temperature-alert-text">Target temperature reached</strong>
+        <button id="temperature-alert-dismiss" type="button" class="button-quiet">Dismiss</button>
+      </div>
+
+      <section class="live-region" aria-labelledby="live-title">
+        <div class="section-heading"><h1 id="live-title">Live control</h1><span class="section-note">Controller-reported values</span></div>
+        <div id="live-unavailable" class="live-unavailable">
+          <div><strong id="unavailable-title">G30 disconnected</strong><span>Live controller data and controls are unavailable.</span></div>
+          <button id="connect-inline" type="button">Scan &amp; connect</button>
+        </div>
+        <div id="live-instruments" class="instrument-grid">
+          <article class="instrument actual-instrument">
+            <p class="instrument-label">Actual</p>
+            <p id="actual" class="actual-value">--.- <small>°C</small></p>
+            <div class="supporting-metrics">
+              <span><b id="heating-rate">—</b><small>Heating rate</small></span>
+              <span><b id="eta">—</b><small>ETA</small></span>
+            </div>
+          </article>
+          <article class="instrument target-instrument">
+            <p class="instrument-label target-color">Target</p>
+            <p id="target" class="major-value">--.- °C</p>
+            <form id="target-form" class="target-entry">
+              <label class="sr-only" for="target-input">Target temperature in Celsius</label>
+              <button id="target-down" type="button" class="button-quiet" aria-label="Lower target by 0.5 degrees">−0.5</button>
+              <div class="temperature-input"><input id="target-input" type="number" step="any" inputmode="decimal" autocomplete="off" placeholder="65.5" /><span aria-hidden="true">°C</span></div>
+              <button id="target-up" type="button" class="button-quiet" aria-label="Raise target by 0.5 degrees">+0.5</button>
+              <button id="target-apply" type="submit" class="button-amber">Set</button>
+            </form>
+          </article>
+          <article class="instrument heater-instrument">
+            <div class="instrument-title-row"><p class="instrument-label">Heater</p><strong id="heater-state" class="state-value">UNKNOWN</strong></div>
+            <div class="output-row"><span>Output</span><strong id="heater-power">Unknown</strong></div>
+            <div class="power-track" role="meter" aria-label="Heater output" aria-valuemin="0" aria-valuemax="100"><span id="heater-power-bar"></span></div>
+            <div class="context-actions"><button id="heat-on">Turn on</button><button id="heat-off" class="button-danger">Turn off</button></div>
+          </article>
+          <article class="instrument pump-instrument">
+            <div class="instrument-title-row"><p class="instrument-label">Pump</p><strong id="pump-state" class="state-value">UNKNOWN</strong></div>
+            <p class="instrument-help">Wort circulation</p>
+            <div class="context-actions"><button id="pump-on">Turn on</button><button id="pump-off" class="button-quiet">Turn off</button></div>
+          </article>
+        </div>
+      </section>
+
+      <div class="workspace-grid">
+        <section id="graph-section" class="work-region graph-region" aria-labelledby="graph-title">
+          <div class="section-heading graph-heading">
+            <div><h2 id="graph-title">Temperature history</h2><span id="graph-session-label" class="section-note">No active session</span></div>
+            <div class="range-buttons" role="group" aria-label="Graph time range">
+              <button data-range="15" class="button-quiet active">15 min</button><button data-range="60" class="button-quiet">1 hour</button><button data-range="session" class="button-quiet">Session</button>
+            </div>
+          </div>
+          <div class="graph-frame">
+            <svg id="temperature-graph" viewBox="0 0 800 260" role="img" aria-label="Actual and target temperature history">
+              <g id="graph-grid" aria-hidden="true"></g><text id="graph-empty" x="400" y="124" text-anchor="middle">Start a brew session to record history.</text>
+              <polyline id="target-line" class="graph-line target-line" points=""></polyline><polyline id="actual-line" class="graph-line actual-line" points=""></polyline>
+            </svg>
+          </div>
+          <div class="graph-legend"><span class="actual-key">Actual</span><span class="target-key">Target</span></div>
+        </section>
+
+        <aside class="side-workspace">
+          <section class="work-region process-region" aria-labelledby="process-title">
+            <div class="section-heading"><h2 id="process-title">Process</h2></div>
+            <div id="process-unavailable" class="compact-empty">Controller process controls unavailable.</div>
+            <div id="process-live">
+              <article id="timer-panel" class="process-block">
+                <div class="process-summary"><div><span class="instrument-label">Timer</span><strong id="timer-state">UNKNOWN</strong></div><span id="timer-remaining" class="process-time">--:--</span></div>
+                <p id="timer-total" class="section-note">Total: --:--</p>
+                <button id="timer-configure" class="button-quiet configure-button" type="button" aria-expanded="false">Set timer</button>
+                <div id="timer-config" class="process-config hidden"><div class="duration-inputs"><label>Hours <input id="timer-hours" type="number" min="0" value="0" /></label><label>Minutes <input id="timer-minutes" type="number" min="0" value="2" /></label></div><button id="timer-start">Start timer</button></div>
+                <div id="timer-active-actions" class="process-actions hidden"><button id="timer-pause">Pause</button><button id="timer-resume">Resume</button><button id="timer-cancel" class="button-quiet">Cancel</button></div>
+              </article>
+              <article id="delay-panel" class="process-block">
+                <div class="process-summary"><div><span class="instrument-label target-color">Delayed heat</span><strong id="delay-state">UNKNOWN</strong></div><span id="delay-remaining" class="process-time">--:--</span></div>
+                <p id="delay-target" class="section-note">Controller target: --.- °C</p>
+                <button id="delay-configure" class="button-quiet configure-button" type="button" aria-expanded="false">Set delay</button>
+                <div id="delay-config" class="process-config hidden"><p class="section-note">Duration until start, not clock time.</p><div class="duration-inputs"><label>Hours <input id="delay-hours" type="number" min="0" value="0" /></label><label>Minutes <input id="delay-minutes" type="number" min="0" value="5" /></label></div><button id="delay-start" class="button-amber">Arm delayed heat</button></div>
+                <div id="delay-active-actions" class="process-actions hidden"><button id="delay-pause">Pause</button><button id="delay-resume">Resume</button><button id="delay-cancel" class="button-danger">Cancel</button></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="work-region session-region" id="session-card" aria-labelledby="session-heading">
+            <div class="section-heading"><h2 id="session-heading">Brew session</h2><strong id="session-status" class="state-value">IDLE</strong></div>
+            <div id="session-idle"><p class="compact-empty">No active brew</p><div class="session-start-row"><label class="sr-only" for="session-recipe">Recipe</label><select id="session-recipe"><option value="">Manual / no recipe</option></select><label class="sr-only" for="session-name">Optional session name</label><input id="session-name" type="text" maxlength="120" placeholder="Optional session name" /><button id="session-start">Start session</button></div></div>
+            <div id="session-active" class="hidden active-session"><p id="session-title" class="session-title">Brew session</p><p id="session-runtime" class="session-runtime">Running 00:00</p><p id="session-phase" class="section-note">Phase: UNKNOWN</p><p id="session-plan" class="section-note">No recipe context</p><p id="session-summary" class="section-note">Statistics will appear as sufficient telemetry is recorded.</p><div class="session-start-row"><select id="phase-marker"><option value="MASH_STARTED">Mark mash start</option><option value="MASH_COMPLETED">Mark mash complete</option><option value="BOIL_STARTED">Mark boil start</option><option value="BOIL_COMPLETED">Mark boil complete</option></select><button id="phase-mark" class="button-quiet" type="button">Mark</button></div><button id="session-end" class="button-danger">End session</button></div>
+          </section>
+        </aside>
+      </div>
+
+      <section class="lower-workspace">
+        <article class="log-region"><div class="section-heading"><h2>Event log</h2><span class="section-note">Newest first</span></div><div id="event-list" class="event-list"><p class="compact-empty">No session events yet.</p></div></article>
+        <article class="history-region"><div class="section-heading"><h2>Brew history</h2></div><div id="session-history" class="history-list"><p class="compact-empty">No completed sessions yet.</p></div></article>
+      </section>
+      <section class="data-tools">
+        <details id="recipes-panel" class="work-region">
+          <summary><strong>Recipes</strong><label class="button-amber import-button" for="recipe-import">Import from Brewfather</label></summary>
+          <div class="recipe-layout"><div><div id="recipe-list" class="history-list"><p class="compact-empty">Import a Brewfather recipe to use recipe context during brew sessions.</p></div><input id="recipe-import" type="file" accept=".xml,text/xml,application/xml" class="hidden" /><div id="recipe-preview" class="recipe-preview hidden"></div></div></div>
+        </details>
+        <section class="work-region statistics-region"><div class="section-heading"><h2>Performance</h2><button id="performance-refresh" class="button-quiet" type="button">Refresh</button></div><div id="performance-summary" class="compact-empty">Complete comparable brews to see your G30's measured performance.</div></section>
+      </section>
+      <footer><span>Local gateway only · offline dashboard</span></footer>
+    </main>
+    <script src="/ws-client.js" defer></script>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

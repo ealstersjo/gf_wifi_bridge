@@ -1,0 +1,18 @@
+import React from 'react';
+import {StatusBar, useColorScheme} from 'react-native';
+import {SafeAreaProvider} from 'react-native-safe-area-context';
+
+import {HomeScreen} from './src/screens/HomeScreen';
+
+function App(): React.JSX.Element {
+  const dark = useColorScheme() === 'dark';
+
+  return (
+    <SafeAreaProvider>
+      <StatusBar barStyle={dark ? 'light-content' : 'dark-content'} />
+      <HomeScreen />
+    </SafeAreaProvider>
+  );
+}
+
+export default App;
