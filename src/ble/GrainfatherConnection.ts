@@ -289,7 +289,11 @@ export class GrainfatherConnection {
     return true;
   }
 
-  async scanAndConnect(timeoutMs = 25_000): Promise<void> {
+  // Keep automatic discovery bounded to the same finite window as the manual
+  // scan. A 25-second fallback made every missed advertisement feel like a
+  // stalled connection attempt, even though a nearby G30 is normally found
+  // within the first few scan callbacks.
+  async scanAndConnect(timeoutMs = 10_000): Promise<void> {
     this.cancelAutoConnect?.('A new scan-and-connect request replaced the previous one');
     this.cancelAutoConnect = null;
     this.stopScan();
