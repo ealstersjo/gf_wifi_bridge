@@ -187,6 +187,7 @@ export class BrewSessionManager {
       targetTemperatureC: observation.state.targetTemperatureC,
       heaterEnabled: observation.state.heaterOn,
       heaterOutputPercent: observation.state.heaterPowerPercent,
+      heaterControlMode: observation.state.heaterControlMode,
       pumpEnabled: observation.state.pumpOn,
       rssi: observation.rssi,
     });

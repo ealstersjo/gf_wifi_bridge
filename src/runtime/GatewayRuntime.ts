@@ -114,6 +114,7 @@ class GatewayRuntimeOwner {
       scanAndConnect: () => controller.scanAndConnect(), disconnect: () => controller.disconnect(),
       setTargetTemperature: value => expected('TARGET_CHANGED', value, () => controller.setTargetTemperature(value)),
       setHeater: enabled => expected(enabled ? 'HEATER_ON' : 'HEATER_OFF', enabled, () => controller.setHeater(enabled)),
+      setHeaterControlMode: mode => controller.setHeaterControlMode(mode),
       setPump: enabled => expected(enabled ? 'PUMP_ON' : 'PUMP_OFF', enabled, () => controller.setPump(enabled)),
       startTimer: duration => expected('TIMER_STARTED', 'RUNNING', () => controller.startTimer(duration)),
       setTimerPaused: paused => expected(paused ? 'TIMER_PAUSED' : 'TIMER_RESUMED', paused ? 'PAUSED' : 'RUNNING', () => controller.setTimerPaused(paused)),

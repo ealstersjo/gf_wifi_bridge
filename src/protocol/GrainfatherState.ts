@@ -12,6 +12,8 @@ export type GrainfatherDelayedHeatState =
   | 'PAUSED'
   | 'STARTED';
 
+export type HeaterControlMode = 'TEMPERATURE' | 'MANUAL_POWER' | 'UNKNOWN';
+
 export interface GrainfatherState {
   actualTemperatureC: number | null;
   targetTemperatureC: number | null;
@@ -25,6 +27,7 @@ export interface GrainfatherState {
   stageNumber: number | null;
   delayedHeat: boolean | null;
   manualPowerMode: boolean | null;
+  heaterControlMode: HeaterControlMode;
   timerActive: boolean | null;
   timerPaused: boolean | null;
   timerDurationSeconds: number | null;
@@ -49,6 +52,7 @@ export const EMPTY_GRAINFATHER_STATE: GrainfatherState = {
   stageNumber: null,
   delayedHeat: null,
   manualPowerMode: null,
+  heaterControlMode: 'UNKNOWN',
   timerActive: null,
   timerPaused: null,
   timerDurationSeconds: null,
@@ -63,6 +67,9 @@ export const EMPTY_GRAINFATHER_STATE: GrainfatherState = {
 export function deriveGrainfatherState(
   state: GrainfatherState,
 ): GrainfatherState {
+  const heaterControlMode: HeaterControlMode =
+    state.manualPowerMode === true ? 'MANUAL_POWER' :
+      state.manualPowerMode === false ? 'TEMPERATURE' : 'UNKNOWN';
   let timerState: GrainfatherTimerState = 'UNKNOWN';
   if (state.timerPaused === true) {
     timerState = 'PAUSED';
@@ -95,5 +102,5 @@ export function deriveGrainfatherState(
         )
       : null;
 
-  return {...state, timerState, delayedHeatState, timerElapsedSeconds};
+  return {...state, heaterControlMode, timerState, delayedHeatState, timerElapsedSeconds};
 }

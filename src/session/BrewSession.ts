@@ -153,6 +153,7 @@ export interface TelemetrySample {
   targetTemperatureC: number | null;
   heaterEnabled: boolean | null;
   heaterOutputPercent: number | null;
+  heaterControlMode: 'TEMPERATURE' | 'MANUAL_POWER' | 'UNKNOWN' | null;
   pumpEnabled: boolean | null;
   rssi: number | null;
 }

@@ -39,6 +39,7 @@ function domain(): jest.Mocked<GatewayDomain> {
     disconnect: jest.fn(async () => undefined),
     setTargetTemperature: jest.fn<Promise<void>, [number]>(async () => undefined),
     setHeater: jest.fn<Promise<void>, [boolean]>(async () => undefined),
+    setHeaterControlMode: jest.fn<Promise<void>, ['TEMPERATURE' | 'MANUAL_POWER']>(async () => undefined),
     setPump: jest.fn<Promise<void>, [boolean]>(async () => undefined),
     startTimer: jest.fn<Promise<void>, [number]>(async () => undefined),
     setTimerPaused: jest.fn<Promise<void>, [boolean]>(async () => undefined),
@@ -56,7 +57,7 @@ function sessionDomain(): jest.Mocked<SessionApiDomain> {
     end: jest.fn<ReturnType<SessionApiDomain['end']>, Parameters<SessionApiDomain['end']>>(async () => ({...session, endedAt: '2026-09-16T10:00:00.000Z', status: 'COMPLETED' as const})),
     list: jest.fn(async () => [session]),
     get: jest.fn<ReturnType<SessionApiDomain['get']>, Parameters<SessionApiDomain['get']>>(async () => session),
-    telemetry: jest.fn<ReturnType<SessionApiDomain['telemetry']>, Parameters<SessionApiDomain['telemetry']>>(async () => [{id: 1, sessionId: session.id, timestamp: session.startedAt, actualTemperatureC: 20, targetTemperatureC: 65, heaterEnabled: true, heaterOutputPercent: 100, pumpEnabled: false, rssi: -50}]),
+    telemetry: jest.fn<ReturnType<SessionApiDomain['telemetry']>, Parameters<SessionApiDomain['telemetry']>>(async () => [{id: 1, sessionId: session.id, timestamp: session.startedAt, actualTemperatureC: 20, targetTemperatureC: 65, heaterEnabled: true, heaterOutputPercent: 100, heaterControlMode: 'TEMPERATURE', pumpEnabled: false, rssi: -50}]),
     events: jest.fn<ReturnType<SessionApiDomain['events']>, Parameters<SessionApiDomain['events']>>(async () => [{id: 1, sessionId: session.id, timestamp: session.startedAt, type: 'SESSION_STARTED' as const, source: 'SYSTEM' as const, payload: {}}]),
   };
 }
@@ -157,6 +158,7 @@ describe('GatewayApi command routing', () => {
 
     await post('/api/v1/target', '{"temperatureC":66.5}');
     await post('/api/v1/heater', '{"enabled":false}');
+    await post('/api/v1/heater/mode', '{"mode":"MANUAL_POWER"}');
     await post('/api/v1/pump', '{"enabled":true}');
     await post('/api/v1/timer/start', '{"durationSeconds":120}');
     await post('/api/v1/timer/pause');
@@ -169,6 +171,7 @@ describe('GatewayApi command routing', () => {
 
     expect(commands.setTargetTemperature).toHaveBeenCalledWith(66.5);
     expect(commands.setHeater).toHaveBeenCalledWith(false);
+    expect(commands.setHeaterControlMode).toHaveBeenCalledWith('MANUAL_POWER');
     expect(commands.setPump).toHaveBeenCalledWith(true);
     expect(commands.startTimer).toHaveBeenCalledWith(120);
     expect(commands.setTimerPaused).toHaveBeenNthCalledWith(1, true);

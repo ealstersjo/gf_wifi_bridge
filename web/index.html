@@ -68,6 +68,16 @@
             <div class="context-actions"><button id="pump-on">Turn on</button><button id="pump-off" class="button-quiet">Turn off</button></div>
           </article>
         </div>
+        <section class="advanced-heater" aria-labelledby="advanced-heater-title">
+          <div class="advanced-heater-heading"><h2 id="advanced-heater-title">Advanced heater control</h2><span class="experimental-label">Experimental</span></div>
+          <div class="advanced-heater-row">
+            <fieldset class="mode-choice"><legend>Control mode</legend>
+              <label><input id="heater-mode-temperature" type="radio" name="heater-mode" value="TEMPERATURE" /> Temperature control</label>
+              <label><input id="heater-mode-manual" type="radio" name="heater-mode" value="MANUAL_POWER" /> Manual power</label>
+            </fieldset>
+            <div class="advanced-output"><span>Controller-reported output</span><strong id="advanced-heater-output">Unknown</strong><small id="advanced-heater-note">Temperature control remains active.</small></div>
+          </div>
+        </section>
       </section>
 
       <div class="workspace-grid">

@@ -1,6 +1,7 @@
 import {
   buildCancelTimerCommand,
   buildHeaterCommand,
+  buildHeaterControlModeCommand,
   buildPumpCommand,
   buildStartDelayedHeatCommand,
   buildStartTimerCommand,
@@ -139,6 +140,11 @@ describe('G30 commands', () => {
     expect(() => buildTargetTemperatureCommand(Number.NaN)).toThrow();
     expect(() => buildTargetTemperatureCommand(-0.5)).toThrow();
     expect(() => buildTargetTemperatureCommand(100.5)).toThrow();
+  });
+
+  it('creates the source-verified manual-power mode commands', () => {
+    expect(bytesToAscii(buildHeaterControlModeCommand('MANUAL_POWER'))).toBe('f1'.padEnd(19, ' '));
+    expect(bytesToAscii(buildHeaterControlModeCommand('TEMPERATURE'))).toBe('f0'.padEnd(19, ' '));
   });
 
   it('accepts the verified maximum duration', () => {

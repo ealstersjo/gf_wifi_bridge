@@ -130,7 +130,7 @@ describe('heating rate and ETA', () => {
   const samples = (temps: number[], offsets = temps.map((_, i) => i * 30_000)): TelemetrySample[] => temps.map((temperature, index) => ({
     id: index + 1, sessionId: 's1', timestamp: new Date(1_000_000 + offsets[index]).toISOString(),
     actualTemperatureC: temperature, targetTemperatureC: 67, heaterEnabled: true,
-    heaterOutputPercent: 100, pumpEnabled: false, rssi: -50,
+    heaterOutputPercent: 100, heaterControlMode: 'TEMPERATURE', pumpEnabled: false, rssi: -50,
   }));
 
   it('uses regression for rising, flat, falling and irregular samples', () => {

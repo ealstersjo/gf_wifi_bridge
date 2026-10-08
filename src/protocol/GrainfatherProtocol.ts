@@ -64,6 +64,15 @@ export function buildPumpCommand(enabled: boolean): Uint8Array {
   return formatGrainfatherCommand(enabled ? 'L1' : 'L0');
 }
 
+/** Verified by the preserved Grainfather command table: f1/f0 toggle the
+ * controller's native manual-power mode. The controller reports the result in
+ * W parameter 4 (manual power mode). */
+export function buildHeaterControlModeCommand(
+  mode: 'TEMPERATURE' | 'MANUAL_POWER',
+): Uint8Array {
+  return formatGrainfatherCommand(mode === 'MANUAL_POWER' ? 'f1' : 'f0');
+}
+
 // Exact command strings are documented by the preserved
 // clausbroch/Grainfather-Bluetooth-Protocol fork and its
 // GrainfatherCommands.js implementation. Its transport writes UTF-8 text,

@@ -8,7 +8,7 @@ const samples: TelemetrySample[] = Array.from({length: 13}, (_, index) => ({
   actualTemperatureC: index < 6 ? 20 + index * 7.8 : 67 + (index % 2 ? 0.2 : -0.1),
   targetTemperatureC: 67,
   heaterEnabled: true,
-  heaterOutputPercent: index < 6 ? 100 : 30,
+  heaterOutputPercent: index < 6 ? 100 : 30, heaterControlMode: 'TEMPERATURE',
   pumpEnabled: index % 2 === 0,
   rssi: -50,
 }));

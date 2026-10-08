@@ -77,6 +77,18 @@ h1, h2 { margin: 0; color: #303730; font-size: .78rem; font-weight: 750; letter-
 .power-track span { display: block; width: 0; height: 100%; background: var(--amber); transition: width .25s ease; }
 .instrument-help { min-height: 44px; margin: 29px 0 16px; }
 .context-actions { display: flex; gap: 7px; }
+.advanced-heater { margin-top: 14px; border: 1px solid var(--line); background: var(--surface); padding: 12px 15px; }
+.advanced-heater-heading { display: flex; align-items: baseline; gap: 9px; margin-bottom: 9px; }
+.advanced-heater-heading h2 { font-size: .72rem; }
+.experimental-label { color: var(--amber); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; }
+.advanced-heater-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.mode-choice { display: flex; gap: 13px; margin: 0; padding: 0; border: 0; color: var(--neutral); font-size: .76rem; }
+.mode-choice legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.mode-choice label { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.mode-choice input { accent-color: var(--amber); }
+.advanced-output { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 2px 9px; color: var(--text-muted); font-size: .72rem; }
+.advanced-output strong { color: var(--neutral); font-size: .95rem; }
+.advanced-output small { grid-column: 1 / -1; color: var(--text-muted); }
 .target-entry { display: grid; grid-template-columns: auto minmax(92px, 1fr) auto auto; gap: 6px; align-items: stretch; }
 .temperature-input { display: flex; align-items: center; min-width: 0; border: 1px solid #9ca69b; border-radius: 4px; background: white; }
 .temperature-input:focus-within { outline: 3px solid color-mix(in srgb, var(--focus) 35%, transparent); border-color: var(--focus); }
@@ -188,6 +200,7 @@ footer { border-top: 1px solid var(--line); padding: 10px 0; color: var(--text-m
   .side-workspace { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 600px) {
+  .advanced-heater-row { align-items: flex-start; flex-direction: column; gap: 9px; }
   .data-tools summary { align-items: flex-start; flex-direction: column; }
   #recipe-list .history-item { align-items: flex-start; }
   .recipe-buttons { align-self: center; }

@@ -4,6 +4,7 @@ import {BleService} from './BleService';
 import {
   buildCancelTimerCommand,
   buildHeaterCommand,
+  buildHeaterControlModeCommand,
   buildPumpCommand,
   buildStartDelayedHeatCommand,
   buildStartTimerCommand,
@@ -557,6 +558,16 @@ export class GrainfatherConnection {
       payload: buildHeaterCommand(enabled),
       confirmationSource: 'Y',
       isConfirmed: state => state.heaterOn === enabled,
+    });
+  }
+
+  setHeaterControlMode(mode: 'TEMPERATURE' | 'MANUAL_POWER'): Promise<void> {
+    const manual = mode === 'MANUAL_POWER';
+    return this.commandExecutor.execute({
+      description: manual ? 'enter manual power mode' : 'return to temperature control',
+      payload: buildHeaterControlModeCommand(mode),
+      confirmationSource: 'W',
+      isConfirmed: state => state.manualPowerMode === manual,
     });
   }
 

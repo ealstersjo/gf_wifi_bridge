@@ -8,6 +8,7 @@
     "actual", "target", "rssi", "target-down", "target-up", "target-form",
     "target-input", "target-apply", "heater-state",
     "heater-power", "heat-on", "heat-off", "pump-state", "pump-on", "pump-off",
+    "heater-mode-temperature", "heater-mode-manual", "advanced-heater-output", "advanced-heater-note",
     "timer-state", "timer-remaining", "timer-total", "timer-hours", "timer-minutes",
     "timer-start", "timer-pause", "timer-resume", "timer-cancel", "delay-state",
     "delay-remaining", "delay-target", "delay-hours", "delay-minutes", "delay-start",
@@ -474,6 +475,13 @@
     elements["heater-power-bar"].parentElement.setAttribute("aria-valuenow", String(Math.max(0, Math.min(100, g.heater?.powerPercent || 0))));
     elements["pump-state"].textContent = booleanState(g.pump?.enabled);
     elements["pump-state"].classList.toggle("on", g.pump?.enabled === true);
+    const controlMode = g.heater?.controlMode || (g.heater?.manualPowerMode === true ? "MANUAL_POWER" : g.heater?.manualPowerMode === false ? "TEMPERATURE" : "UNKNOWN");
+    elements["heater-mode-temperature"].checked = controlMode === "TEMPERATURE";
+    elements["heater-mode-manual"].checked = controlMode === "MANUAL_POWER";
+    elements["advanced-heater-output"].textContent = g.heater?.powerPercent == null ? "Unknown" : `${g.heater.powerPercent}%`;
+    elements["advanced-heater-note"].textContent = controlMode === "MANUAL_POWER"
+      ? "Manual mode is active. Power writing is not enabled until its payload is independently verified."
+      : controlMode === "TEMPERATURE" ? "Temperature control remains active." : "Waiting for controller mode status.";
     elements["timer-state"].textContent = g.timer?.state || "UNKNOWN";
     elements["timer-remaining"].textContent = formatDuration(g.timer?.remainingSeconds);
     elements["timer-total"].textContent = `Total: ${formatDuration(g.timer?.durationSeconds)}`;
@@ -506,6 +514,8 @@
     elements["heat-off"].disabled = busy || g.heater?.enabled === false;
     elements["pump-on"].disabled = busy || g.pump?.enabled === true;
     elements["pump-off"].disabled = busy || g.pump?.enabled === false;
+    elements["heater-mode-temperature"].disabled = busy || controlMode === "TEMPERATURE";
+    elements["heater-mode-manual"].disabled = busy || controlMode === "MANUAL_POWER";
     elements["heat-on"].classList.toggle("hidden", g.heater?.enabled === true);
     elements["heat-off"].classList.toggle("hidden", g.heater?.enabled !== true);
     elements["pump-on"].classList.toggle("hidden", g.pump?.enabled === true);
@@ -594,6 +604,12 @@
   elements["heat-off"].onclick = () => run("/api/v1/heater", {enabled: false});
   elements["pump-on"].onclick = () => run("/api/v1/pump", {enabled: true});
   elements["pump-off"].onclick = () => run("/api/v1/pump", {enabled: false});
+  const changeHeaterMode = event => {
+    const mode = event.target.value;
+    request("/api/v1/heater/mode", {mode}).catch(error => { showMessage(error.message, true); render(); });
+  };
+  elements["heater-mode-temperature"].onchange = changeHeaterMode;
+  elements["heater-mode-manual"].onchange = changeHeaterMode;
   elements["timer-start"].onclick = () => { timerConfigOpen = false; run("/api/v1/timer/start", {durationSeconds: durationFromInputs("timer")}); };
   elements["timer-pause"].onclick = () => run("/api/v1/timer/pause");
   elements["timer-resume"].onclick = () => run("/api/v1/timer/resume");

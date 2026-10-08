@@ -1,6 +1,6 @@
 import {ConnectionState} from '../ble/GrainfatherConnection';
 import {CommandStatus} from '../ble/SerializedCommandExecutor';
-import {GrainfatherState} from '../protocol/GrainfatherState';
+import {GrainfatherState, HeaterControlMode} from '../protocol/GrainfatherState';
 import {BrewEvent, BrewSession, Recipe, SessionActualValues, SessionLiveState, SessionStatistics, TelemetrySample} from '../session/BrewSession';
 
 export const GATEWAY_VERSION = '0.1.0';
@@ -27,6 +27,7 @@ export interface GatewayDomain {
   disconnect: () => Promise<void>;
   setTargetTemperature: (temperatureC: number) => Promise<void>;
   setHeater: (enabled: boolean) => Promise<void>;
+  setHeaterControlMode: (mode: Exclude<HeaterControlMode, 'UNKNOWN'>) => Promise<void>;
   setPump: (enabled: boolean) => Promise<void>;
   startTimer: (durationSeconds: number) => Promise<void>;
   setTimerPaused: (paused: boolean) => Promise<void>;
@@ -99,6 +100,8 @@ export function serializeGatewayState(
         enabled: state.heaterOn,
         powerPercent: state.heaterPowerPercent,
         manualPowerMode: state.manualPowerMode,
+        controlMode: state.heaterControlMode,
+        manualPowerPercent: state.manualPowerMode === true ? state.heaterPowerPercent : null,
       },
       pump: {enabled: state.pumpOn},
       process: {
@@ -356,6 +359,12 @@ export class GatewayApi {
         case '/api/v1/heater':
           await this.domain.setHeater(requiredBoolean(body, 'enabled'));
           break;
+        case '/api/v1/heater/mode': {
+          const mode = body.mode;
+          if (mode !== 'TEMPERATURE' && mode !== 'MANUAL_POWER') throw new Error('mode must be TEMPERATURE or MANUAL_POWER');
+          await this.domain.setHeaterControlMode(mode);
+          break;
+        }
         case '/api/v1/pump':
           await this.domain.setPump(requiredBoolean(body, 'enabled'));
           break;

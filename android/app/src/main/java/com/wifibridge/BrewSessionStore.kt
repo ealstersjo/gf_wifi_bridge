@@ -9,7 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessions.db", null, 4) {
+class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessions.db", null, 5) {
   override fun onConfigure(db: SQLiteDatabase) {
     db.setForeignKeyConstraintsEnabled(true)
   }
@@ -22,7 +22,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
     db.execSQL("""CREATE TABLE telemetry_samples (
       id INTEGER PRIMARY KEY AUTOINCREMENT, session_id TEXT NOT NULL, timestamp TEXT NOT NULL,
       actual_temperature_c REAL NOT NULL, target_temperature_c REAL,
-      heater_enabled INTEGER, heater_output_percent REAL, pump_enabled INTEGER, rssi INTEGER,
+      heater_enabled INTEGER, heater_output_percent REAL, heater_control_mode TEXT, pump_enabled INTEGER, rssi INTEGER,
       FOREIGN KEY(session_id) REFERENCES brew_sessions(id)
     )""")
     db.execSQL("""CREATE TABLE brew_events (
@@ -71,6 +71,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
     }
     if (oldVersion < 3) listOf("source TEXT", "source_recipe_id TEXT", "source_format TEXT", "source_imported_at TEXT", "original_recipe_data_json TEXT").forEach { column -> db.execSQL("ALTER TABLE recipes ADD COLUMN $column") }
     if (oldVersion < 4) db.execSQL("ALTER TABLE recipes ADD COLUMN normalized_recipe_json TEXT")
+    if (oldVersion < 5) db.execSQL("ALTER TABLE telemetry_samples ADD COLUMN heater_control_mode TEXT")
   }
 
   fun execute(operation: String, payload: JSONObject): String {
@@ -132,6 +133,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
       putNullableDouble("target_temperature_c", payload, "targetTemperatureC")
       putNullableBoolean("heater_enabled", payload, "heaterEnabled")
       putNullableDouble("heater_output_percent", payload, "heaterOutputPercent")
+      if (payload.isNull("heaterControlMode")) putNull("heater_control_mode") else put("heater_control_mode", payload.getString("heaterControlMode"))
       putNullableBoolean("pump_enabled", payload, "pumpEnabled")
       if (payload.isNull("rssi")) putNull("rssi") else put("rssi", payload.getInt("rssi"))
     }
@@ -252,7 +254,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
   private fun telemetryJson(cursor: Cursor) = JSONObject().apply {
     put("id", cursor.long("id")); put("sessionId", cursor.string("session_id")); put("timestamp", cursor.string("timestamp"))
     put("actualTemperatureC", cursor.double("actual_temperature_c")); put("targetTemperatureC", cursor.nullableDouble("target_temperature_c"))
-    put("heaterEnabled", cursor.nullableBoolean("heater_enabled")); put("heaterOutputPercent", cursor.nullableDouble("heater_output_percent"))
+    put("heaterEnabled", cursor.nullableBoolean("heater_enabled")); put("heaterOutputPercent", cursor.nullableDouble("heater_output_percent")); put("heaterControlMode", cursor.nullableString("heater_control_mode"))
     put("pumpEnabled", cursor.nullableBoolean("pump_enabled")); put("rssi", cursor.nullableInt("rssi"))
   }
   private fun eventJson(cursor: Cursor) = JSONObject().apply {
