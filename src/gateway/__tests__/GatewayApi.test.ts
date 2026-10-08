@@ -30,6 +30,7 @@ function runtime(): GatewayRuntimeState {
     commandStatus: {state: 'IDLE'},
     rssi: -52,
     gatewayInfo: {port: 8080, localIp: '192.168.1.87', webSocketClients: 1},
+    debugEvents: [{id: 7, timestamp: new Date('2026-09-16T08:00:00.500Z'), category: 'PROTOCOL', message: 'Decoded status frame'}],
   };
 }
 
@@ -89,6 +90,7 @@ describe('gateway state serialization', () => {
       },
     });
     expect(JSON.stringify(snapshot)).not.toMatch(/ZX|characteristic|raw/i);
+    expect(snapshot.debugEvents).toEqual([{id: 7, timestamp: '2026-09-16T08:00:00.500Z', category: 'PROTOCOL', message: 'Decoded status frame'}]);
   });
 
   it('marks old or disconnected Grainfather data stale', () => {

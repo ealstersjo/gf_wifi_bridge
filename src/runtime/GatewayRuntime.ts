@@ -214,6 +214,7 @@ class GatewayRuntimeOwner {
       grainfatherState: this.state.grainfatherState, commandStatus: this.state.commandStatus, rssi: this.state.rssi,
       gatewayInfo: {port: this.state.gatewayStatus.port, localIp: this.state.gatewayStatus.localIp, webSocketClients: this.state.gatewayStatus.webSocketClients},
       session: this.state.sessionLive,
+      debugEvents: this.state.debugEvents,
     };
   }
 

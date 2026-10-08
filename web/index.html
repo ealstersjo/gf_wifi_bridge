@@ -138,6 +138,11 @@
         </details>
         <section class="work-region statistics-region"><div class="section-heading"><h2>Performance</h2><button id="performance-refresh" class="button-quiet" type="button">Refresh</button></div><div id="performance-summary" class="compact-empty">Complete comparable brews to see your G30's measured performance.</div></section>
       </section>
+      <details id="debug-panel" class="work-region debug-region">
+        <summary><strong>Debug flow</strong><span id="debug-count" class="section-note">0 events</span></summary>
+        <div class="debug-toolbar"><label for="debug-filter">Filter</label><select id="debug-filter"><option value="ALL">All categories</option><option value="BLE">BLE</option><option value="G30">G30</option><option value="PROTOCOL">Protocol</option><option value="COMMAND">Command</option><option value="STATE">State</option><option value="RECONNECT">Reconnect</option><option value="SERVICE">Service</option><option value="GATEWAY">Gateway</option><option value="HTTP">HTTP</option><option value="WS">WebSocket</option></select></div>
+        <div id="debug-list" class="debug-list"><p class="compact-empty">No debug events yet.</p></div>
+      </details>
       <footer><span>Local gateway only · offline dashboard</span></footer>
     </main>
     <script src="/ws-client.js" defer></script>

@@ -1,4 +1,4 @@
-import {ConnectionState} from '../ble/GrainfatherConnection';
+import {ConnectionState, DebugEvent} from '../ble/GrainfatherConnection';
 import {CommandStatus} from '../ble/SerializedCommandExecutor';
 import {GrainfatherState, HeaterControlMode} from '../protocol/GrainfatherState';
 import {BrewEvent, BrewSession, Recipe, SessionActualValues, SessionLiveState, SessionStatistics, TelemetrySample} from '../session/BrewSession';
@@ -20,6 +20,7 @@ export interface GatewayRuntimeState {
   rssi: number | null;
   gatewayInfo: GatewayInfo;
   session?: SessionLiveState;
+  debugEvents?: DebugEvent[];
 }
 
 export interface GatewayDomain {
@@ -133,6 +134,12 @@ export function serializeGatewayState(
     },
   };
   if (runtime.session) snapshot.session = runtime.session;
+  snapshot.debugEvents = (runtime.debugEvents ?? []).map(event => ({
+    id: event.id,
+    timestamp: event.timestamp.toISOString(),
+    category: event.category,
+    message: event.message,
+  }));
   return snapshot;
 }
 

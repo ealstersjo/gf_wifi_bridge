@@ -21,6 +21,7 @@
     "live-unavailable", "live-instruments", "unavailable-title", "process-unavailable", "process-live",
     "timer-panel", "timer-configure", "timer-config", "timer-active-actions",
     "delay-panel", "delay-configure", "delay-config", "delay-active-actions",
+    "debug-count", "debug-filter", "debug-list",
   ].map(id => [id, byId(id)]));
 
   let snapshot = null;
@@ -44,6 +45,7 @@
   let previousActualTemperature = null;
   let alertedTargetKey = null;
   let alertAudioContext = null;
+  let debugFilter = "ALL";
 
   const formatTemperature = value => Number.isFinite(value) ? `${value.toFixed(1)} °C` : "--.- °C";
   const formatDuration = value => {
@@ -435,8 +437,36 @@
     });
   }
 
+  function renderDebugEvents() {
+    const all = Array.isArray(snapshot?.debugEvents) ? snapshot.debugEvents : [];
+    const filtered = debugFilter === "ALL" ? all : all.filter(event => event.category === debugFilter);
+    elements["debug-count"].textContent = `${all.length} event${all.length === 1 ? "" : "s"}`;
+    elements["debug-list"].replaceChildren();
+    if (filtered.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "compact-empty";
+      empty.textContent = all.length === 0 ? "No debug events yet." : "No events match this filter.";
+      elements["debug-list"].append(empty);
+      return;
+    }
+    filtered.forEach(event => {
+      const row = document.createElement("div"); row.className = "debug-item";
+      const time = document.createElement("time");
+      const timestamp = Date.parse(event.timestamp);
+      time.textContent = Number.isFinite(timestamp)
+        ? new Date(timestamp).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit", second: "2-digit"})
+        : "--:--:--";
+      const category = document.createElement("span");
+      category.className = `debug-category ${String(event.category || "unknown").toLowerCase()}`;
+      category.textContent = event.category || "UNKNOWN";
+      const message = document.createElement("code"); message.textContent = event.message || "";
+      row.append(time, category, message); elements["debug-list"].append(row);
+    });
+  }
+
   function render() {
     const g = snapshot?.grainfather;
+    renderDebugEvents();
     setPill(elements["gateway-status"], socketOnline ? "Gateway online" : "Gateway reconnecting", socketOnline ? "" : "pending");
     if (!g) {
       document.body.classList.remove("is-connected");
@@ -634,6 +664,7 @@
   };
   elements["recipe-import"].onchange = event => { const file = event.target.files?.[0]; if (!file) return; file.text().then(text => importRecipeText(text, file.name)).catch(error => showMessage(error.message, true)); event.target.value = ""; };
   elements["performance-refresh"].onclick = () => loadPerformance().catch(error => showMessage(error.message, true));
+  elements["debug-filter"].onchange = event => { debugFilter = event.target.value; renderDebugEvents(); };
   elements["session-end"].onclick = () => {
     const id = snapshot?.session?.active?.id;
     if (id) request(`/api/v1/sessions/${encodeURIComponent(id)}/end`).then(() => loadSessions()).catch(error => showMessage(error.message, true));
