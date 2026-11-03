@@ -3,6 +3,7 @@
   "use strict";
 
   const byId = id => document.getElementById(id);
+  const tabPanels = Array.from(document.querySelectorAll("[data-tab-panel]"));
   const elements = Object.fromEntries([
     "gateway-status", "g30-status", "message", "temperature-alert", "temperature-alert-text", "temperature-alert-dismiss", "alert-enable", "freshness", "connect", "connect-inline", "disconnect", "theme-select",
     "actual", "target", "rssi", "target-down", "target-up", "target-form",
@@ -708,12 +709,20 @@
 
   document.querySelectorAll("[data-nav]").forEach(button => {
     button.onclick = () => {
-      document.querySelectorAll("[data-nav]").forEach(item => item.classList.toggle("active", item === button));
       const target = button.dataset.nav;
-      const destination = target === "brew-mode" ? elements["live-title"] : target === "recipes" ? elements["recipes-panel"] : target === "sessions" ? elements["session-card"] : target === "statistics" ? elements["performance-summary"] : target === "diagnostics" ? elements["diagnostics-view"] : target === "settings" ? elements["gateway-detail"] : elements["live-title"];
-      destination?.scrollIntoView({behavior: "smooth", block: "start"});
+      document.querySelectorAll("[data-nav]").forEach(item => {
+        const active = item === button;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-current", active ? "page" : "false");
+      });
+      tabPanels.forEach(panel => {
+        const visible = panel.dataset.tabPanel.split(/\s+/).includes(target);
+        panel.classList.toggle("tab-hidden", !visible);
+      });
+      document.querySelector(".app-content")?.scrollTo({top: 0, behavior: "smooth"});
     };
   });
+  document.querySelector('[data-nav="dashboard"]')?.click();
   applyTheme(themePreference);
   window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
     if (themePreference === "system") document.body.dataset.theme = "system";

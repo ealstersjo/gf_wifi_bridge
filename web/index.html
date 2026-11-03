@@ -45,7 +45,7 @@
         <button id="temperature-alert-dismiss" type="button" class="button-quiet">Dismiss</button>
       </div>
 
-      <section class="live-region" aria-labelledby="live-title">
+      <section class="live-region" data-tab-panel="dashboard brew-mode" aria-labelledby="live-title">
         <div class="section-heading"><h1 id="live-title">Live control</h1><span class="section-note">Controller-reported values</span></div>
         <div id="live-unavailable" class="live-unavailable">
           <div><strong id="unavailable-title">G30 disconnected</strong><span>Live controller data and controls are unavailable.</span></div>
@@ -95,8 +95,8 @@
         </section>
       </section>
 
-      <div class="workspace-grid">
-        <section id="graph-section" class="work-region graph-region" aria-labelledby="graph-title">
+      <div class="workspace-grid" data-tab-panel="dashboard brew-mode sessions">
+        <section id="graph-section" data-tab-panel="dashboard" class="work-region graph-region" aria-labelledby="graph-title">
           <div class="section-heading graph-heading">
             <div><h2 id="graph-title">Temperature history</h2><span id="graph-session-label" class="section-note">No active session</span></div>
             <div class="range-buttons" role="group" aria-label="Graph time range">
@@ -134,7 +134,7 @@
             </div>
           </section>
 
-          <section class="work-region session-region" id="session-card" aria-labelledby="session-heading">
+          <section class="work-region session-region" id="session-card" data-tab-panel="sessions" aria-labelledby="session-heading">
             <div class="section-heading"><h2 id="session-heading">Brew session</h2><strong id="session-status" class="state-value">IDLE</strong></div>
             <div id="session-idle"><p class="compact-empty">No active brew</p><div class="session-start-row"><label class="sr-only" for="session-recipe">Recipe</label><select id="session-recipe"><option value="">Manual / no recipe</option></select><label class="sr-only" for="session-name">Optional session name</label><input id="session-name" type="text" maxlength="120" placeholder="Optional session name" /><button id="session-start">Start session</button></div></div>
             <div id="session-active" class="hidden active-session"><p id="session-title" class="session-title">Brew session</p><p id="session-runtime" class="session-runtime">Running 00:00</p><p id="session-phase" class="section-note">Phase: UNKNOWN</p><p id="session-plan" class="section-note">No recipe context</p><p id="session-summary" class="section-note">Statistics will appear as sufficient telemetry is recorded.</p><div class="session-start-row"><select id="phase-marker"><option value="MASH_STARTED">Mark mash start</option><option value="MASH_COMPLETED">Mark mash complete</option><option value="BOIL_STARTED">Mark boil start</option><option value="BOIL_COMPLETED">Mark boil complete</option></select><button id="phase-mark" class="button-quiet" type="button">Mark</button></div><button id="session-end" class="button-danger">End session</button></div>
@@ -142,18 +142,18 @@
         </aside>
       </div>
 
-      <section class="lower-workspace">
+      <section class="lower-workspace" data-tab-panel="sessions">
         <article class="log-region"><div class="section-heading"><h2>Event log</h2><span class="section-note">Newest first</span></div><div id="event-list" class="event-list"><p class="compact-empty">No session events yet.</p></div></article>
         <article class="history-region"><div class="section-heading"><h2>Brew history</h2></div><div id="session-history" class="history-list"><p class="compact-empty">No completed sessions yet.</p></div></article>
       </section>
-      <section class="data-tools">
-        <details id="recipes-panel" class="work-region">
+      <section class="data-tools" data-tab-panel="recipes statistics">
+        <details id="recipes-panel" data-tab-panel="recipes" class="work-region">
           <summary><strong>Recipes</strong><label class="button-amber import-button" for="recipe-import">Import from Brewfather</label></summary>
           <div class="recipe-layout"><div><div id="recipe-list" class="history-list"><p class="compact-empty">Import a Brewfather recipe to use recipe context during brew sessions.</p></div><input id="recipe-import" type="file" accept=".xml,text/xml,application/xml" class="hidden" /><div id="recipe-preview" class="recipe-preview hidden"></div></div></div>
         </details>
-        <section class="work-region statistics-region"><div class="section-heading"><h2>Performance</h2><button id="performance-refresh" class="button-quiet" type="button">Refresh</button></div><div id="performance-summary" class="compact-empty">Complete comparable brews to see your G30's measured performance.</div></section>
+        <section class="work-region statistics-region" data-tab-panel="statistics"><div class="section-heading"><h2>Performance</h2><button id="performance-refresh" class="button-quiet" type="button">Refresh</button></div><div id="performance-summary" class="compact-empty">Complete comparable brews to see your G30's measured performance.</div></section>
       </section>
-      <section id="diagnostics-view" class="diagnostics-view">
+      <section id="diagnostics-view" data-tab-panel="diagnostics" class="diagnostics-view">
         <div class="section-heading diagnostics-heading"><div><h2>Diagnostics &amp; logs</h2><span class="section-note">Understand whether a problem is in the G30, Android gateway or web connection.</span></div></div>
         <section class="work-region error-catalog" aria-labelledby="error-catalog-title">
           <div class="section-heading"><div><h2 id="error-catalog-title">Possible errors</h2><span class="section-note">Reference for errors currently handled by the gateway.</span></div></div>
@@ -180,6 +180,10 @@
           <div class="debug-toolbar"><label for="debug-filter">Category</label><select id="debug-filter"><option value="ALL">All categories</option><option value="BLE">BLE</option><option value="G30">G30</option><option value="PROTOCOL">Protocol</option><option value="COMMAND">Command</option><option value="STATE">State</option><option value="RECONNECT">Reconnect</option><option value="SERVICE">Service</option><option value="GATEWAY">Gateway</option><option value="HTTP">HTTP</option><option value="WS">WebSocket</option></select><label for="debug-source">Source</label><select id="debug-source"><option value="ALL">All sources</option><option value="G30">G30</option><option value="ANDROID">Android</option><option value="WEB">Web</option></select><label for="debug-severity">Level</label><select id="debug-severity"><option value="ALL">All levels</option><option value="ERROR">Error</option><option value="WARN">Warning</option><option value="INFO">Info</option><option value="DEBUG">Debug</option></select><input id="debug-search" type="search" placeholder="Search logs" aria-label="Search debug logs" /><button id="debug-pause" class="button-quiet" type="button">Pause</button><button id="debug-copy" class="button-quiet" type="button">Copy</button></div>
           <div id="debug-list" class="debug-list"><p class="compact-empty">No debug events yet.</p></div>
         </details>
+      </section>
+      <section id="settings-view" data-tab-panel="settings" class="work-region tab-settings-view">
+        <div class="section-heading"><div><h2>Settings</h2><span class="section-note">Gateway preferences and connection details.</span></div></div>
+        <div class="settings-grid"><article class="settings-card"><strong>Theme</strong><p>Choose System, Light or Dark from the selector in the top bar.</p></article><article class="settings-card"><strong>Gateway</strong><p>Keep this page on the local network. The current port and gateway status are shown above.</p></article></div>
       </section>
       <footer><span>Local gateway only · offline dashboard</span></footer>
       </div>

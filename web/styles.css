@@ -354,6 +354,12 @@ button:disabled { color: var(--text-muted); border-color: var(--line); backgroun
 .data-tools { gap: 18px; padding-bottom: 22px; }
 .debug-region { margin-bottom: 20px; }
 .diagnostics-view { display: grid; gap: 18px; padding-top: 4px; scroll-margin-top: 20px; }
+.tab-hidden { display: none !important; }
+.tab-settings-view { margin: 22px 0; }
+.settings-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.settings-card { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.settings-card strong { color: var(--text); }
+.settings-card p { margin: 7px 0 0; color: var(--text-muted); font-size: .78rem; line-height: 1.5; }
 .diagnostics-heading { margin: 0; }
 .error-catalog { padding: 20px; }
 .error-catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -394,4 +400,5 @@ footer { border-top: 0; color: var(--text-muted); }
   .graph-region { min-height: 0; }
   .debug-toolbar { justify-content: flex-start; }
   .error-catalog-grid { grid-template-columns: 1fr; }
+  .settings-grid { grid-template-columns: 1fr; }
 }
