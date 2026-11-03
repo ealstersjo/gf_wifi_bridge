@@ -20,6 +20,7 @@ import {
   MIN_TARGET_TEMPERATURE_C,
 } from '../protocol/GrainfatherProtocol';
 import {GatewayRuntime} from '../runtime/GatewayRuntime';
+import {GatewayNative} from '../gateway/GatewayNative';
 
 const STALE_AFTER_MS = 8_000;
 
@@ -146,15 +147,12 @@ export function HomeScreen(): React.JSX.Element {
     });
   };
   const testGateway = async (): Promise<void> => {
-    if (!gatewayStatus.localIp) {
-      setGatewayHealth('No active LAN IPv4 address');
-      return;
-    }
-    setGatewayHealth('Testing…');
+    setGatewayHealth('Checking…');
     try {
-      const response = await fetch(`http://${gatewayStatus.localIp}:${gatewayStatus.port}/api/v1/health`);
-      const body = await response.text();
-      setGatewayHealth(response.ok ? `HTTP ${response.status}: ${body}` : `HTTP ${response.status}`);
+      const status = await GatewayNative.getStatus();
+      setGatewayHealth(status.running
+        ? `Server running on port ${status.port}; local IP ${status.localIp ?? 'unavailable'}`
+        : 'Server is not running');
     } catch (error) {
       setGatewayHealth(`Failed: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -225,7 +223,7 @@ export function HomeScreen(): React.JSX.Element {
           <Text style={styles.secondary}>
             WebSocket clients: {gatewayStatus.webSocketClients}
           </Text>
-          <Button title="TEST LOCAL GATEWAY" disabled={!gatewayStatus.running} onPress={() => testGateway().catch(() => {})} />
+          <Button title="CHECK LOCAL SERVER" disabled={!gatewayStatus.running} onPress={() => testGateway().catch(() => {})} />
           {gatewayHealth ? <Text style={styles.secondary} selectable>{gatewayHealth}</Text> : null}
           <Text style={styles.secondary}>
             For a dedicated gateway, exclude this app from battery optimization in Android settings.
