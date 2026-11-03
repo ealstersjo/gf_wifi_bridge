@@ -4,7 +4,7 @@
 
   const byId = id => document.getElementById(id);
   const elements = Object.fromEntries([
-    "gateway-status", "g30-status", "message", "temperature-alert", "temperature-alert-text", "temperature-alert-dismiss", "alert-enable", "freshness", "connect", "connect-inline", "disconnect",
+    "gateway-status", "g30-status", "message", "temperature-alert", "temperature-alert-text", "temperature-alert-dismiss", "alert-enable", "freshness", "connect", "connect-inline", "disconnect", "theme-select",
     "actual", "target", "rssi", "target-down", "target-up", "target-form",
     "target-input", "target-apply", "heater-state",
     "heater-power", "heat-on", "heat-off", "pump-state", "pump-on", "pump-off",
@@ -17,7 +17,7 @@
     "session-active", "session-name", "session-start", "session-title",
     "session-runtime", "session-end", "graph-session-label", "temperature-graph",
     "graph-empty", "graph-grid", "graph-section", "actual-line", "target-line", "session-history", "event-list",
-    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary",
+    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary", "recipes-panel", "debug-panel", "live-title",
     "live-unavailable", "live-instruments", "unavailable-title", "process-unavailable", "process-live",
     "timer-panel", "timer-configure", "timer-config", "timer-active-actions",
     "delay-panel", "delay-configure", "delay-config", "delay-active-actions",
@@ -45,6 +45,7 @@
   let previousActualTemperature = null;
   let alertedTargetKey = null;
   let alertAudioContext = null;
+  let themePreference = localStorage.getItem("g30-theme") || "system";
   let debugFilter = "ALL";
   let debugSource = "ALL";
   let debugSeverity = "ALL";
@@ -76,6 +77,13 @@
     clearTimeout(messageTimer);
     elements.message.className = "message hidden";
   };
+
+  function applyTheme(preference) {
+    themePreference = preference;
+    document.body.dataset.theme = preference;
+    if (elements["theme-select"]) elements["theme-select"].value = preference;
+    localStorage.setItem("g30-theme", preference);
+  }
 
   function updateAlertPermissionControl() {
     const supported = typeof window.Notification !== "undefined";
@@ -673,6 +681,7 @@
   };
   elements["recipe-import"].onchange = event => { const file = event.target.files?.[0]; if (!file) return; file.text().then(text => importRecipeText(text, file.name)).catch(error => showMessage(error.message, true)); event.target.value = ""; };
   elements["performance-refresh"].onclick = () => loadPerformance().catch(error => showMessage(error.message, true));
+  elements["theme-select"].onchange = event => applyTheme(event.target.value);
   elements["debug-filter"].onchange = event => { debugFilter = event.target.value; renderDebugEvents(); };
   elements["debug-source"].onchange = event => { debugSource = event.target.value; renderDebugEvents(); };
   elements["debug-severity"].onchange = event => { debugSeverity = event.target.value; renderDebugEvents(); };
@@ -697,6 +706,18 @@
     elements[id].oninput = render;
   });
 
+  document.querySelectorAll("[data-nav]").forEach(button => {
+    button.onclick = () => {
+      document.querySelectorAll("[data-nav]").forEach(item => item.classList.toggle("active", item === button));
+      const target = button.dataset.nav;
+      const destination = target === "brew-mode" ? elements["live-title"] : target === "recipes" ? elements["recipes-panel"] : target === "sessions" ? elements["session-card"] : target === "statistics" ? elements["performance-summary"] : target === "settings" ? elements["debug-panel"] : elements["live-title"];
+      destination?.scrollIntoView({behavior: "smooth", block: "start"});
+    };
+  });
+  applyTheme(themePreference);
+  window.matchMedia?.("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+    if (themePreference === "system") document.body.dataset.theme = "system";
+  });
   setInterval(render, 1000);
   updateAlertPermissionControl();
   connectSocket();

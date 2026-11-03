@@ -7,16 +7,30 @@
     <title>G30 Gateway</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
-  <body class="is-disconnected">
+  <body class="is-disconnected" data-theme="system">
     <main class="shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <div class="brand-mark"><span class="brand-symbol">G</span><div><strong>Grainfather</strong><small>Gateway</small></div></div>
+        <nav class="primary-nav">
+          <button class="nav-item active" type="button" data-nav="dashboard"><span>⌂</span>Dashboard</button>
+          <button class="nav-item" type="button" data-nav="brew-mode"><span>◉</span>Brew mode</button>
+          <button class="nav-item" type="button" data-nav="recipes"><span>▤</span>Recipes</button>
+          <button class="nav-item" type="button" data-nav="sessions"><span>◷</span>Sessions</button>
+          <button class="nav-item" type="button" data-nav="statistics"><span>▥</span>Statistics</button>
+          <button class="nav-item" type="button" data-nav="settings"><span>⚙</span>Settings</button>
+        </nav>
+        <div class="sidebar-footer"><span class="sidebar-dot"></span><span>Local gateway</span></div>
+      </aside>
+      <div class="app-content">
       <header class="app-bar">
-        <div class="identity"><strong>G30 GATEWAY</strong><span id="gateway-detail">Port 8080</span></div>
+        <div class="identity"><div class="mobile-brand">G30 Gateway</div><span id="gateway-detail">Port 8080</span></div>
         <div class="connection-strip" aria-label="Gateway and Grainfather status">
           <span id="gateway-status" class="status-mark pending">Gateway connecting</span>
           <span id="g30-status" class="status-mark muted">G30 unknown</span>
           <span id="freshness" class="status-meta">Waiting for state…</span>
           <span id="rssi" class="status-meta">-- dBm</span>
           <div class="connection-actions">
+            <label class="theme-control" for="theme-select"><span>Theme</span><select id="theme-select"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
             <button id="alert-enable" type="button" class="button-quiet">Enable alerts</button>
             <button id="connect">Scan &amp; connect</button>
             <button id="disconnect" class="button-danger">Disconnect</button>
@@ -144,6 +158,7 @@
         <div id="debug-list" class="debug-list"><p class="compact-empty">No debug events yet.</p></div>
       </details>
       <footer><span>Local gateway only · offline dashboard</span></footer>
+      </div>
     </main>
     <script src="/ws-client.js" defer></script>
     <script src="/app.js" defer></script>
