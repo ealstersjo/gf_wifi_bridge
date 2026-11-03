@@ -176,8 +176,9 @@ h1, h2 { margin: 0; color: #303730; font-size: .78rem; font-weight: 750; letter-
 
 .debug-region { margin-bottom: 18px; }
 .debug-region summary { cursor: pointer; display: flex; justify-content: space-between; gap: 12px; padding: 0; }
-.debug-toolbar { display: flex; justify-content: flex-end; align-items: center; gap: 7px; margin: 12px 0 8px; color: var(--text-muted); font-size: .7rem; }
-.debug-toolbar select { border: 1px solid #aeb6ac; border-radius: 4px; padding: 5px 7px; background: white; font: inherit; }
+.debug-toolbar { display: flex; justify-content: flex-end; align-items: center; flex-wrap: wrap; gap: 7px; margin: 12px 0 8px; color: var(--text-muted); font-size: .7rem; }
+.debug-toolbar select, .debug-toolbar input { border: 1px solid #aeb6ac; border-radius: 4px; padding: 5px 7px; background: white; font: inherit; }
+.debug-toolbar input { min-width: 130px; }
 .debug-list { max-height: 360px; overflow: auto; border-top: 1px solid var(--line); }
 .debug-item { display: grid; grid-template-columns: 78px 82px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 7px 3px; border-bottom: 1px solid var(--line-soft); font-size: .7rem; }
 .debug-item time, .debug-category { color: var(--text-muted); }

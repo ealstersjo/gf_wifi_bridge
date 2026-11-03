@@ -90,7 +90,17 @@ describe('gateway state serialization', () => {
       },
     });
     expect(JSON.stringify(snapshot)).not.toMatch(/ZX|characteristic|raw/i);
-    expect(snapshot.debugEvents).toEqual([{id: 7, timestamp: '2026-09-16T08:00:00.500Z', category: 'PROTOCOL', message: 'Decoded status frame'}]);
+    expect(snapshot.debugEvents).toEqual([expect.objectContaining({id: 7, timestamp: '2026-09-16T08:00:00.500Z', category: 'PROTOCOL', message: 'Decoded status frame', source: 'G30', severity: 'INFO'})]);
+  });
+
+  it('exposes layered diagnostics with recent errors', async () => {
+    const api = new GatewayApi(runtime, domain());
+    const response = await api.handle({id: 'diag', method: 'GET', path: '/api/v1/diagnostics', body: ''});
+    expect(response).toMatchObject({statusCode: 200, body: {
+      gateway: {status: 'online', port: 8080},
+      web: {webSocketClients: 1},
+      g30: {connectionState: 'CONNECTED'},
+    }});
   });
 
   it('marks old or disconnected Grainfather data stale', () => {

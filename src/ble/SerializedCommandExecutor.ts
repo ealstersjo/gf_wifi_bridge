@@ -2,6 +2,7 @@ import {GrainfatherState} from '../protocol/GrainfatherState';
 
 export interface CommandStatus {
   state: 'IDLE' | 'PENDING' | 'CONFIRMED' | 'FAILED';
+  commandId?: string;
   description?: string;
   detail?: string;
 }
@@ -14,6 +15,7 @@ interface CommandSpec {
 }
 
 interface PendingCommand extends CommandSpec {
+  commandId: string;
   resolve: () => void;
   reject: (error: Error) => void;
   timeout: ReturnType<typeof setTimeout>;
@@ -22,6 +24,7 @@ interface PendingCommand extends CommandSpec {
 /** One in-flight write, confirmed only by later controller notifications. */
 export class SerializedCommandExecutor {
   private pending: PendingCommand | null = null;
+  private commandSequence = 0;
 
   constructor(
     private readonly isConnected: () => boolean,
@@ -42,23 +45,24 @@ export class SerializedCommandExecutor {
 
     return new Promise<void>((resolve, reject) => {
       let pending: PendingCommand;
+      const commandId = `cmd-${++this.commandSequence}`;
       const timeout = setTimeout(() => {
         if (this.pending !== pending) return;
         this.pending = null;
         const error = new Error('Timed out waiting for controller confirmation');
-        this.onStatus({state: 'FAILED', description: spec.description, detail: error.message});
+        this.onStatus({state: 'FAILED', commandId, description: spec.description, detail: error.message});
         reject(error);
       }, this.timeoutMs);
-      pending = {...spec, resolve, reject, timeout};
+      pending = {...spec, commandId, resolve, reject, timeout};
       this.pending = pending;
-      this.onStatus({state: 'PENDING', description: spec.description});
+      this.onStatus({state: 'PENDING', commandId, description: spec.description});
 
       this.write(spec.payload).catch(cause => {
         if (this.pending !== pending) return;
         clearTimeout(this.pending.timeout);
         this.pending = null;
         const error = cause instanceof Error ? cause : new Error(String(cause));
-        this.onStatus({state: 'FAILED', description: spec.description, detail: error.message});
+        this.onStatus({state: 'FAILED', commandId, description: spec.description, detail: error.message});
         reject(error);
       });
     });
@@ -73,7 +77,7 @@ export class SerializedCommandExecutor {
     const completed = this.pending;
     clearTimeout(completed.timeout);
     this.pending = null;
-    this.onStatus({state: 'CONFIRMED', description: completed.description});
+    this.onStatus({state: 'CONFIRMED', commandId: completed.commandId, description: completed.description});
     completed.resolve();
   }
 
@@ -83,7 +87,7 @@ export class SerializedCommandExecutor {
     clearTimeout(cancelled.timeout);
     this.pending = null;
     const error = new Error(detail);
-    this.onStatus({state: 'FAILED', description: cancelled.description, detail});
+    this.onStatus({state: 'FAILED', commandId: cancelled.commandId, description: cancelled.description, detail});
     cancelled.reject(error);
   }
 }

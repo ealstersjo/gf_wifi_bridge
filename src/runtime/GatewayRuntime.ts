@@ -137,7 +137,7 @@ class GatewayRuntimeOwner {
     });
     this.subscriptions.push(
       GatewayNative.onRequest(request => api.handle(request).then(response => GatewayNative.respond(request.id, response.statusCode, response.body)).catch(() => GatewayNative.respond(request.id, 500, {error: 'gateway_internal_error'}))),
-      GatewayNative.onLog(event => this.patch({debugEvents: [{id: ++this.gatewayEventId, timestamp: new Date(), category: event.category, message: event.message}, ...this.state.debugEvents].slice(0, MAX_DEBUG_EVENTS)})),
+      GatewayNative.onLog(event => this.patch({debugEvents: [{id: ++this.gatewayEventId, timestamp: new Date(), category: event.category, message: event.message, source: 'ANDROID', subsystem: event.category, severity: /error|fail|timeout/i.test(event.message) ? 'ERROR' : /warn|retry/i.test(event.message) ? 'WARN' : 'INFO', eventType: `${event.category}_${event.message.split(/\s|:/, 1)[0].toUpperCase()}`} as DebugEvent, ...this.state.debugEvents].slice(0, MAX_DEBUG_EVENTS)})),
       GatewayNative.onClientCount(webSocketClients => this.patch({gatewayStatus: {...this.state.gatewayStatus, webSocketClients}})),
       controller.onBluetoothStateChanged(bluetoothState => this.patch({bluetoothState})),
     );

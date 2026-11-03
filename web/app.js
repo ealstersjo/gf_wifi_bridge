@@ -21,7 +21,7 @@
     "live-unavailable", "live-instruments", "unavailable-title", "process-unavailable", "process-live",
     "timer-panel", "timer-configure", "timer-config", "timer-active-actions",
     "delay-panel", "delay-configure", "delay-config", "delay-active-actions",
-    "debug-count", "debug-filter", "debug-list",
+    "debug-count", "debug-filter", "debug-source", "debug-severity", "debug-search", "debug-pause", "debug-copy", "debug-list",
   ].map(id => [id, byId(id)]));
 
   let snapshot = null;
@@ -46,6 +46,10 @@
   let alertedTargetKey = null;
   let alertAudioContext = null;
   let debugFilter = "ALL";
+  let debugSource = "ALL";
+  let debugSeverity = "ALL";
+  let debugSearch = "";
+  let debugPaused = false;
 
   const formatTemperature = value => Number.isFinite(value) ? `${value.toFixed(1)} °C` : "--.- °C";
   const formatDuration = value => {
@@ -439,7 +443,12 @@
 
   function renderDebugEvents() {
     const all = Array.isArray(snapshot?.debugEvents) ? snapshot.debugEvents : [];
-    const filtered = debugFilter === "ALL" ? all : all.filter(event => event.category === debugFilter);
+    const filtered = all.filter(event =>
+      (debugFilter === "ALL" || event.category === debugFilter) &&
+      (debugSource === "ALL" || event.source === debugSource) &&
+      (debugSeverity === "ALL" || event.severity === debugSeverity) &&
+      (!debugSearch || `${event.message} ${event.eventType || ""} ${event.subsystem || ""}`.toLowerCase().includes(debugSearch))
+    );
     elements["debug-count"].textContent = `${all.length} event${all.length === 1 ? "" : "s"}`;
     elements["debug-list"].replaceChildren();
     if (filtered.length === 0) {
@@ -458,7 +467,7 @@
         : "--:--:--";
       const category = document.createElement("span");
       category.className = `debug-category ${String(event.category || "unknown").toLowerCase()}`;
-      category.textContent = event.category || "UNKNOWN";
+      category.textContent = `${event.source || "G30"}/${event.severity || "INFO"}`;
       const message = document.createElement("code"); message.textContent = event.message || "";
       row.append(time, category, message); elements["debug-list"].append(row);
     });
@@ -466,7 +475,7 @@
 
   function render() {
     const g = snapshot?.grainfather;
-    renderDebugEvents();
+    if (!debugPaused) renderDebugEvents();
     setPill(elements["gateway-status"], socketOnline ? "Gateway online" : "Gateway reconnecting", socketOnline ? "" : "pending");
     if (!g) {
       document.body.classList.remove("is-connected");
@@ -665,6 +674,14 @@
   elements["recipe-import"].onchange = event => { const file = event.target.files?.[0]; if (!file) return; file.text().then(text => importRecipeText(text, file.name)).catch(error => showMessage(error.message, true)); event.target.value = ""; };
   elements["performance-refresh"].onclick = () => loadPerformance().catch(error => showMessage(error.message, true));
   elements["debug-filter"].onchange = event => { debugFilter = event.target.value; renderDebugEvents(); };
+  elements["debug-source"].onchange = event => { debugSource = event.target.value; renderDebugEvents(); };
+  elements["debug-severity"].onchange = event => { debugSeverity = event.target.value; renderDebugEvents(); };
+  elements["debug-search"].oninput = event => { debugSearch = event.target.value.trim().toLowerCase(); renderDebugEvents(); };
+  elements["debug-pause"].onclick = () => { debugPaused = !debugPaused; elements["debug-pause"].textContent = debugPaused ? "Resume" : "Pause"; if (!debugPaused) renderDebugEvents(); };
+  elements["debug-copy"].onclick = () => {
+    const text = Array.from(elements["debug-list"].querySelectorAll(".debug-item")).map(row => row.textContent).join("\n");
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showMessage("Debug logs copied.")).catch(() => showMessage("Could not copy debug logs.", true));
+  };
   elements["session-end"].onclick = () => {
     const id = snapshot?.session?.active?.id;
     if (id) request(`/api/v1/sessions/${encodeURIComponent(id)}/end`).then(() => loadSessions()).catch(error => showMessage(error.message, true));

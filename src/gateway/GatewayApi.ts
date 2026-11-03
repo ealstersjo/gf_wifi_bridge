@@ -139,6 +139,13 @@ export function serializeGatewayState(
     timestamp: event.timestamp.toISOString(),
     category: event.category,
     message: event.message,
+    source: event.source ?? 'G30',
+    subsystem: event.subsystem ?? event.category,
+    severity: event.severity ?? 'INFO',
+    eventType: event.eventType ?? event.category,
+    requestId: event.requestId ?? null,
+    commandId: event.commandId ?? null,
+    details: event.details ?? null,
   }));
   return snapshot;
 }
@@ -261,6 +268,32 @@ export class GatewayApi {
             gateway: 'online',
             version: GATEWAY_VERSION,
             uptimeSeconds: Math.floor((Date.now() - this.startedAt) / 1000),
+          },
+        };
+      }
+      if (request.method === 'GET' && path === '/api/v1/diagnostics') {
+        const runtime = this.getRuntime();
+        return {
+          statusCode: 200,
+          body: {
+            gateway: {
+              status: 'online',
+              version: GATEWAY_VERSION,
+              port: runtime.gatewayInfo.port,
+              localIp: runtime.gatewayInfo.localIp,
+              webSocketClients: runtime.gatewayInfo.webSocketClients,
+            },
+            web: {webSocketClients: runtime.gatewayInfo.webSocketClients},
+            g30: {
+              connectionState: runtime.connectionState,
+              connectionDetail: runtime.connectionDetail ?? null,
+              rssi: runtime.rssi,
+              command: runtime.commandStatus,
+            },
+            recentErrors: (runtime.debugEvents ?? []).filter(event => event.severity === 'ERROR').slice(0, 20).map(event => ({
+              timestamp: event.timestamp.toISOString(), source: event.source ?? 'G30', subsystem: event.subsystem ?? event.category,
+              eventType: event.eventType ?? event.category, message: event.message, requestId: event.requestId ?? null,
+            })),
           },
         };
       }

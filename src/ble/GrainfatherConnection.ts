@@ -57,6 +57,13 @@ export interface DebugEvent {
     | 'HTTP'
     | 'WS';
   message: string;
+  source?: 'G30' | 'ANDROID' | 'WEB';
+  subsystem?: string;
+  severity?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+  eventType?: string;
+  requestId?: string;
+  commandId?: string;
+  details?: Record<string, unknown>;
 }
 
 export interface GrainfatherCallbacks {
@@ -127,7 +134,7 @@ export class GrainfatherConnection {
       status => {
         this.callbacks.onCommandStatus(status);
         const detail = status.detail ? `: ${status.detail}` : '';
-        this.log('COMMAND', `${status.state}: ${status.description ?? 'none'}${detail}`);
+        this.log('COMMAND', `${status.state} ${status.commandId ?? 'no-id'}: ${status.description ?? 'none'}${detail}`);
       },
     );
   }
@@ -141,6 +148,9 @@ export class GrainfatherConnection {
     message: string,
     timestamp = new Date(),
   ): void {
+    const source: DebugEvent['source'] = ['SERVICE', 'GATEWAY'].includes(category) ? 'ANDROID' : ['HTTP', 'WS'].includes(category) ? 'WEB' : 'G30';
+    const severity: DebugEvent['severity'] = /fail|error|timeout|denied|disconnect/i.test(message) ? 'ERROR' : /warn|retry|stale|unknown/i.test(message) ? 'WARN' : 'INFO';
+    const eventType = `${category}_${message.split(/\s|:/, 1)[0].replace(/[^A-Z0-9]+/gi, '_').toUpperCase()}`;
     const prefix = `[${category}]`;
     console.log(prefix, message);
     this.callbacks.onLog({
@@ -148,6 +158,10 @@ export class GrainfatherConnection {
       timestamp,
       category,
       message,
+      source,
+      subsystem: category,
+      severity,
+      eventType,
     });
   }
 

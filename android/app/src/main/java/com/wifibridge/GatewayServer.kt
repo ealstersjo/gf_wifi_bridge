@@ -130,15 +130,16 @@ class GatewayServer(
         ?.takeIf { it.isNotBlank() }
         ?.let { "$path?$it" }
         ?: path
-    onLog("HTTP", "${session.method.name} $requestPath")
+    onLog("HTTP", "$id ${session.method.name} $requestPath")
     onHttpRequest(GatewayHttpRequest(id, session.method.name, requestPath, body))
     val completed = pending.latch.await(45, TimeUnit.SECONDS)
     pendingResponses.remove(id)
-    return if (completed) {
-      jsonResponse(pending.statusCode, pending.body)
-    } else {
-      jsonResponse(504, "{\"error\":\"gateway_request_timeout\"}")
+    if (!completed) {
+      onLog("HTTP", "$id response=504 gateway_request_timeout")
+      return jsonResponse(504, "{\"error\":\"gateway_request_timeout\"}")
     }
+    onLog("HTTP", "$id response=${pending.statusCode}")
+    return jsonResponse(pending.statusCode, pending.body)
   }
 
   private fun readBody(session: IHTTPSession): String {
