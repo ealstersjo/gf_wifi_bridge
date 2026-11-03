@@ -123,10 +123,10 @@ class GatewayRuntimeOwner {
       setDelayedHeatPaused: paused => expected(paused ? 'DELAYED_HEAT_PAUSED' : 'DELAYED_HEAT_RESUMED', paused ? 'PAUSED' : 'ARMED', () => controller.setTimerPaused(paused)),
       cancelDelayedHeat: () => expected('DELAYED_HEAT_CANCELLED', 'INACTIVE', () => controller.cancelDelayedHeat()),
     }, {
-      start: async (name, recipeId = null) => {
-        const recipe = recipeId ? await sessions.recipe(recipeId) : null;
+      start: async (name, recipeId = null, providedRecipe = null, brewfatherBatchId = null) => {
+        const recipe = providedRecipe ?? (recipeId ? await sessions.recipe(recipeId) : null);
         if (recipeId && !recipe) throw new Error('Recipe not found');
-        return sessions.start(name, observation(this.domainState()), new Date(), recipe);
+        return sessions.start(name, observation(this.domainState()), new Date(), recipe, brewfatherBatchId);
       }, end: id => sessions.end(id),
       list: () => sessions.listSessions(), get: id => sessions.getSession(id),
       telemetry: (id, since, limit) => sessions.telemetry(id, since, limit), events: (id, limit) => sessions.events(id, limit),
@@ -134,6 +134,13 @@ class GatewayRuntimeOwner {
       saveRecipe: recipe => sessions.saveRecipe(recipe), duplicateRecipe: (id, name) => sessions.duplicateRecipe(id, name),
       deleteRecipe: id => sessions.deleteRecipe(id), updateActualValues: (id, actual) => sessions.updateActualValues(id, actual),
       markPhase: (id, phase) => sessions.markPhase(id, phase), performance: () => sessions.performance(),
+      listBrewfatherBatches: () => sessions.listBrewfatherBatches(), getBrewfatherBatch: id => sessions.getBrewfatherBatch(id), saveBrewfatherBatch: batch => sessions.saveBrewfatherBatch(batch),
+    }, {
+      status: () => GatewayNative.brewfatherStatus(),
+      test: (userId, apiKey) => GatewayNative.testBrewfatherCredentials(userId, apiKey),
+      save: (userId, apiKey) => GatewayNative.saveBrewfatherCredentials(userId, apiKey),
+      clear: () => GatewayNative.clearBrewfatherCredentials(),
+      get: async path => JSON.parse(await GatewayNative.brewfatherGet(path)),
     });
     this.subscriptions.push(
       GatewayNative.onRequest(request => api.handle(request).then(response => GatewayNative.respond(request.id, response.statusCode, response.body)).catch(() => GatewayNative.respond(request.id, 500, {error: 'gateway_internal_error'}))),

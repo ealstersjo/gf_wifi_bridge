@@ -18,11 +18,12 @@
     "session-active", "session-name", "session-start", "session-title",
     "session-runtime", "session-end", "graph-session-label", "temperature-graph",
     "graph-empty", "graph-grid", "graph-section", "actual-line", "target-line", "session-history", "event-list",
-    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary", "recipes-panel", "diagnostics-view", "debug-panel", "live-title",
+    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary", "recipes-panel", "diagnostics-view", "brewfather-view", "debug-panel", "live-title",
     "live-unavailable", "live-instruments", "unavailable-title", "process-unavailable", "process-live",
     "timer-panel", "timer-configure", "timer-config", "timer-active-actions",
     "delay-panel", "delay-configure", "delay-config", "delay-active-actions",
     "debug-count", "debug-filter", "debug-source", "debug-severity", "debug-search", "debug-pause", "debug-copy", "debug-list",
+    "brewfather-connect-card", "brewfather-connect-form", "brewfather-user-id", "brewfather-api-key", "brewfather-browser", "brewfather-connection-status", "brewfather-refresh", "brewfather-disconnect", "brewfather-search", "brewfather-filter", "brewfather-page-note", "brewfather-batch-list", "brewfather-next-page", "brewfather-detail", "brewfather-detail-title", "brewfather-detail-meta", "brewfather-detail-body", "brewfather-detail-close",
   ].map(id => [id, byId(id)]));
 
   let snapshot = null;
@@ -43,6 +44,9 @@
   let delayConfigOpen = false;
   let messageTimer = null;
   let pendingRecipeImport = null;
+  let brewfatherBatches = [];
+  let brewfatherNextStartAfter = null;
+  let selectedBrewfatherBatch = null;
   let previousActualTemperature = null;
   let alertedTargetKey = null;
   let alertAudioContext = null;
@@ -177,6 +181,72 @@
     const payload = await response.json().catch(() => ({error: "invalid_gateway_response"}));
     if (!response.ok) throw new Error(payload.message || payload.error || `HTTP ${response.status}`);
     return payload;
+  }
+
+  const displayValue = value => value === null || value === undefined || value === "" ? "—" : String(value);
+  const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, character => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"}[character]));
+  const brewfatherStatusLabel = status => displayValue(status).replaceAll("_", " ").toLowerCase().replace(/^./, value => value.toUpperCase());
+
+  function renderBrewfatherBatches() {
+    const query = elements["brewfather-search"].value.trim().toLowerCase();
+    const filter = elements["brewfather-filter"].value;
+    const rows = brewfatherBatches.filter(batch => {
+      const matchesFilter = filter === "ALL" || String(batch.status || "").toUpperCase() === filter;
+      const haystack = `${batch.name || ""} ${batch.recipeName || ""} ${batch.batchNo || ""} ${batch.style || ""}`.toLowerCase();
+      return matchesFilter && (!query || haystack.includes(query));
+    });
+    elements["brewfather-batch-list"].replaceChildren();
+    if (!rows.length) { const empty = document.createElement("p"); empty.className = "compact-empty"; empty.textContent = brewfatherBatches.length ? "No loaded batches match this filter." : "No batches loaded yet."; elements["brewfather-batch-list"].append(empty); }
+    rows.forEach(batch => {
+      const card = document.createElement("button"); card.type = "button"; card.className = "brewfather-batch-card";
+      card.innerHTML = `<span class="brewfather-batch-status">${escapeHtml(brewfatherStatusLabel(batch.status))}</span><strong>${escapeHtml(batch.name || "Unnamed batch")}</strong><span>${escapeHtml(batch.recipeName || "Recipe unavailable")} · Batch ${escapeHtml(batch.batchNo ?? "—")}</span><small>${escapeHtml(batch.brewDate || "No planned date")} · ${escapeHtml(batch.batchVolumeL == null ? "No volume" : `${batch.batchVolumeL} L`)}</small>`;
+      card.onclick = () => loadBrewfatherDetail(batch.id).catch(error => showMessage(error.message, true));
+      elements["brewfather-batch-list"].append(card);
+    });
+    elements["brewfather-page-note"].textContent = brewfatherNextStartAfter ? "Showing loaded batches. More results are available from Brewfather." : `Showing ${brewfatherBatches.length} loaded batch${brewfatherBatches.length === 1 ? "" : "es"}.`;
+    elements["brewfather-next-page"].classList.toggle("hidden", !brewfatherNextStartAfter);
+  }
+
+  async function loadBrewfatherBatches(append = false) {
+    const suffix = append && brewfatherNextStartAfter ? `?startAfter=${encodeURIComponent(brewfatherNextStartAfter)}` : "";
+    let payload;
+    try {
+      payload = await get(`/api/v1/brewfather/batches${suffix}`);
+    } catch (error) {
+      if (append) throw error;
+      const local = await get("/api/v1/brewfather/batches/local");
+      brewfatherBatches = local.batches || [];
+      brewfatherNextStartAfter = null;
+      elements["brewfather-page-note"].textContent = "Brewfather is unavailable. Showing locally cached batches.";
+      renderBrewfatherBatches();
+      return;
+    }
+    brewfatherBatches = append ? [...brewfatherBatches, ...(payload.batches || [])] : (payload.batches || []);
+    brewfatherNextStartAfter = payload.nextStartAfter || null;
+    renderBrewfatherBatches();
+  }
+
+  function renderBrewfatherDetail(batch) {
+    const recipe = batch.recipe || {};
+    const row = (label, value) => `<div class="brewfather-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(displayValue(value))}</strong></div>`;
+    const table = (headers, values) => values.length ? `<div class="brewfather-table-wrap"><table class="brewfather-table"><thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody>${values.join("")}</tbody></table></div>` : `<p class="compact-empty">No data supplied.</p>`;
+    const fermentables = (recipe.fermentables || []).map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.amountKg == null ? "—" : `${item.amountKg} kg`)}</td><td>${escapeHtml(item.yieldPercent == null ? "—" : `${item.yieldPercent}%`)}</td><td>${escapeHtml(item.color)}</td></tr>`);
+    const mashSteps = (recipe.mashSteps || []).map((item, index) => `<tr><td>${index + 1}. ${escapeHtml(item.name)}</td><td>${escapeHtml(item.type)}</td><td>${escapeHtml(item.targetTemperatureC)} °C</td><td>${escapeHtml(item.durationMinutes)} min</td><td>${escapeHtml(item.infuseAmountL == null ? "—" : `${item.infuseAmountL} L`)}</td></tr>`);
+    const hops = (recipe.hops || []).map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.amountG == null ? "—" : `${item.amountG} g`)}</td><td>${escapeHtml(item.alphaPercent == null ? "—" : `${item.alphaPercent}%`)}</td><td>${escapeHtml(item.timeMinutes == null ? "—" : `${item.timeMinutes} min`)}</td><td>${escapeHtml(item.use)}</td></tr>`);
+    const yeasts = (recipe.yeasts || []).map(item => `<tr><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.laboratory)}</td><td>${escapeHtml(item.productId)}</td><td>${escapeHtml(item.attenuationPercent == null ? "—" : `${item.attenuationPercent}%`)}</td></tr>`);
+    elements["brewfather-detail-title"].textContent = batch.name || recipe.name || "Batch";
+    elements["brewfather-detail-meta"].textContent = [batch.recipeName, batch.style, brewfatherStatusLabel(batch.status), batch.batchNo == null ? null : `Batch ${batch.batchNo}`].filter(Boolean).join(" · ");
+    elements["brewfather-detail-body"].innerHTML = `<div class="brewfather-detail-actions"><button id="brewfather-import" type="button">Import / update local copy</button><button id="brewfather-start-session" class="button-quiet" type="button">Start local session</button><span class="section-note">This does not start the G30, heater, pump or Brewfather Brew Tracker.</span></div><div class="brewfather-metrics">${row("Batch volume", batch.batchVolumeL == null ? null : `${batch.batchVolumeL} L`)}${row("ABV", recipe.abvPercent == null ? null : `${recipe.abvPercent}%`)}${row("OG", recipe.og)}${row("FG", recipe.fg)}${row("IBU", recipe.ibu)}${row("Color", recipe.color)}${row("Boil", recipe.boilDurationMinutes == null ? null : `${recipe.boilDurationMinutes} min`)}${row("Efficiency", recipe.efficiencyPercent == null ? null : `${recipe.efficiencyPercent}%`)}</div><section class="brewfather-detail-section"><h3>Fermentables</h3>${table(["Ingredient", "Amount", "Yield", "Color"], fermentables)}</section><section class="brewfather-detail-section"><h3>Mash schedule</h3>${table(["Step", "Type", "Target", "Duration", "Infusion"], mashSteps)}</section><section class="brewfather-detail-section"><h3>Hops</h3>${table(["Hop", "Amount", "Alpha", "Time", "Use"], hops)}</section><section class="brewfather-detail-section"><h3>Yeast</h3>${table(["Yeast", "Manufacturer", "Strain", "Attenuation"], yeasts)}</section><section class="brewfather-detail-section"><h3>Notes</h3><p class="brewfather-notes">${escapeHtml(recipe.notes || "No notes supplied.")}</p></section>`;
+    elements["brewfather-import"].onclick = () => apiRequest(`/api/v1/brewfather/batches/${encodeURIComponent(batch.id)}/import`, {}).then(() => showMessage("Batch cached locally.")).catch(error => showMessage(error.message, true));
+    elements["brewfather-start-session"].onclick = () => apiRequest(`/api/v1/brewfather/batches/${encodeURIComponent(batch.id)}/start-session`, {}).then(() => { showMessage("Local brew session started."); document.querySelector('[data-nav="sessions"]')?.click(); loadSessions().catch(() => {}); }).catch(error => showMessage(error.message, true));
+  }
+
+  async function loadBrewfatherDetail(id) {
+    let payload;
+    try { payload = await get(`/api/v1/brewfather/batches/${encodeURIComponent(id)}`); }
+    catch (error) { payload = await get(`/api/v1/brewfather/batches/${encodeURIComponent(id)}?local=true`); showMessage("Brewfather unavailable. Showing cached batch."); }
+    selectedBrewfatherBatch = payload.batch;
+    elements["brewfather-browser"].classList.add("hidden"); elements["brewfather-detail"].classList.remove("hidden"); renderBrewfatherDetail(selectedBrewfatherBatch);
   }
 
   function run(path, body) {
@@ -692,6 +762,18 @@
     const text = Array.from(elements["debug-list"].querySelectorAll(".debug-item")).map(row => row.textContent).join("\n");
     if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => showMessage("Debug logs copied.")).catch(() => showMessage("Could not copy debug logs.", true));
   };
+  elements["brewfather-connect-form"].onsubmit = event => {
+    event.preventDefault();
+    const userId = elements["brewfather-user-id"].value.trim(); const apiKey = elements["brewfather-api-key"].value.trim();
+    if (!userId || !apiKey) { showMessage("Enter both Brewfather User ID and API Key.", true); return; }
+    apiRequest("/api/v1/brewfather/credentials", {userId, apiKey}).then(() => { elements["brewfather-api-key"].value = ""; elements["brewfather-connect-card"].classList.add("hidden"); elements["brewfather-browser"].classList.remove("hidden"); return loadBrewfatherBatches(); }).catch(error => showMessage(error.message, true));
+  };
+  elements["brewfather-refresh"].onclick = () => loadBrewfatherBatches().catch(error => showMessage(error.message, true));
+  elements["brewfather-next-page"].onclick = () => loadBrewfatherBatches(true).catch(error => showMessage(error.message, true));
+  elements["brewfather-search"].oninput = renderBrewfatherBatches;
+  elements["brewfather-filter"].onchange = renderBrewfatherBatches;
+  elements["brewfather-disconnect"].onclick = () => apiRequest("/api/v1/brewfather/credentials", null, "DELETE").then(() => { brewfatherBatches = []; brewfatherNextStartAfter = null; elements["brewfather-browser"].classList.add("hidden"); elements["brewfather-connect-card"].classList.remove("hidden"); showMessage("Brewfather disconnected."); }).catch(error => showMessage(error.message, true));
+  elements["brewfather-detail-close"].onclick = () => { elements["brewfather-detail"].classList.add("hidden"); elements["brewfather-browser"].classList.remove("hidden"); };
   elements["session-end"].onclick = () => {
     const id = snapshot?.session?.active?.id;
     if (id) request(`/api/v1/sessions/${encodeURIComponent(id)}/end`).then(() => loadSessions()).catch(error => showMessage(error.message, true));
@@ -732,4 +814,5 @@
   connectSocket();
   loadRecipes().catch(error => showMessage(error.message, true));
   loadPerformance().catch(() => {});
+  get("/api/v1/brewfather/status").then(status => { if (status.configured) { elements["brewfather-connect-card"].classList.add("hidden"); elements["brewfather-browser"].classList.remove("hidden"); loadBrewfatherBatches().catch(error => showMessage(error.message, true)); } }).catch(() => {});
 })();

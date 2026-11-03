@@ -2,6 +2,7 @@ import {ConnectionState, DebugEvent} from '../ble/GrainfatherConnection';
 import {CommandStatus} from '../ble/SerializedCommandExecutor';
 import {GrainfatherState, HeaterControlMode} from '../protocol/GrainfatherState';
 import {BrewEvent, BrewSession, Recipe, SessionActualValues, SessionLiveState, SessionStatistics, TelemetrySample} from '../session/BrewSession';
+import {mapBrewfatherBatch, mapBrewfatherBatchSummary} from '../recipes/BrewfatherBatchMapper';
 
 export const GATEWAY_VERSION = '0.1.0';
 export const G30_STALE_AFTER_MS = 8_000;
@@ -51,7 +52,7 @@ export interface GatewayHttpResponse {
 }
 
 export interface SessionApiDomain {
-  start(name: string | null, recipeId?: string | null): Promise<BrewSession>;
+  start(name: string | null, recipeId?: string | null, recipe?: Recipe | null, brewfatherBatchId?: string | null): Promise<BrewSession>;
   end(id: string): Promise<BrewSession>;
   list(): Promise<BrewSession[]>;
   get(id: string): Promise<BrewSession | null>;
@@ -67,6 +68,17 @@ export interface SessionApiDomain {
   updateActualValues?(id: string, actual: SessionActualValues): Promise<BrewSession>;
   markPhase?(id: string, phase: string): Promise<BrewEvent>;
   performance?(): Promise<unknown>;
+  listBrewfatherBatches?(): Promise<unknown[]>;
+  getBrewfatherBatch?(id: string): Promise<any | null>;
+  saveBrewfatherBatch?(batch: unknown): Promise<unknown>;
+}
+
+export interface BrewfatherDomain {
+  status(): Promise<{configured: boolean}>;
+  test(userId: string, apiKey: string): Promise<{connected: boolean}>;
+  save(userId: string, apiKey: string): Promise<{configured: boolean}>;
+  clear(): Promise<void>;
+  get(path: string): Promise<unknown>;
 }
 
 function iso(value: Date | null): string | null {
@@ -221,6 +233,10 @@ function recipePayload(body: Record<string, unknown>, id?: string): Omit<Recipe,
 
 function mapError(error: unknown): GatewayHttpResponse {
   const message = error instanceof Error ? error.message : String(error);
+  if (/credentials|scope rejected|Unauthorized|HTTP 401|HTTP 403/i.test(message)) return {statusCode: 401, body: {error: 'brewfather_authentication_failed', message}};
+  if (/rate limit|HTTP 429/i.test(message)) return {statusCode: 429, body: {error: 'brewfather_rate_limited', message}};
+  if (/Brewfather.*(timeout|unavailable)|HTTP 5\d\d/i.test(message)) return {statusCode: 504, body: {error: 'brewfather_unavailable', message}};
+  if (/Brewfather batch not found|HTTP 404/i.test(message)) return {statusCode: 404, body: {error: 'brewfather_batch_not_found', message}};
   if (/SESSION_ACTIVE/i.test(message)) return {statusCode: 409, body: {error: 'SESSION_ACTIVE', message: message.replace(/^SESSION_ACTIVE:\s*/, '')}};
   if (/session not found/i.test(message)) return {statusCode: 404, body: {error: 'SESSION_NOT_FOUND', message}};
   if (/recipe not found/i.test(message)) return {statusCode: 404, body: {error: 'RECIPE_NOT_FOUND', message}};
@@ -252,6 +268,7 @@ export class GatewayApi {
     private readonly getRuntime: () => GatewayRuntimeState,
     private readonly domain: GatewayDomain,
     private readonly sessions?: SessionApiDomain,
+    private readonly brewfather?: BrewfatherDomain,
   ) {}
 
   async handle(request: GatewayHttpRequest): Promise<GatewayHttpResponse> {
@@ -299,6 +316,29 @@ export class GatewayApi {
       }
       if (request.method === 'GET' && path === '/api/v1/state') {
         return {statusCode: 200, body: serializeGatewayState(this.getRuntime())};
+      }
+      if (this.brewfather && request.method === 'GET' && path === '/api/v1/brewfather/status') {
+        return {statusCode: 200, body: await this.brewfather.status()};
+      }
+      if (this.brewfather && request.method === 'GET' && path === '/api/v1/brewfather/batches/local') {
+        return {statusCode: 200, body: {batches: await this.sessions?.listBrewfatherBatches?.() ?? []}};
+      }
+      if (this.brewfather && request.method === 'GET' && path === '/api/v1/brewfather/batches') {
+        const startAfter = query.startAfter ? `&start_after=${encodeURIComponent(query.startAfter)}` : '';
+        const raw = await this.brewfather.get(`/batches?limit=50${startAfter}`);
+        const payload = raw as any;
+        const rows = Array.isArray(payload) ? payload : payload.batches ?? payload.data ?? payload.items ?? [];
+        return {statusCode: 200, body: {batches: rows.map(mapBrewfatherBatchSummary), nextStartAfter: payload.next_start_after ?? payload.nextStartAfter ?? null}};
+      }
+      const brewfatherBatchMatch = path.match(/^\/api\/v1\/brewfather\/batches\/([^/]+)$/);
+      const brewfatherImportMatch = path.match(/^\/api\/v1\/brewfather\/batches\/([^/]+)\/import$/);
+      const brewfatherStartMatch = path.match(/^\/api\/v1\/brewfather\/batches\/([^/]+)\/start-session$/);
+      if (this.brewfather && request.method === 'GET' && brewfatherBatchMatch) {
+        const id = decodeURIComponent(brewfatherBatchMatch[1]);
+        const local = await this.sessions?.getBrewfatherBatch?.(id);
+        if (query.local === 'true' && local) return {statusCode: 200, body: {batch: local, cached: true}};
+        const raw = await this.brewfather.get(`/batches/${encodeURIComponent(id)}`);
+        return {statusCode: 200, body: {batch: mapBrewfatherBatch(raw)}};
       }
       if (this.sessions && request.method === 'GET' && path === '/api/v1/recipes') {
         return {statusCode: 200, body: {recipes: await this.sessions.recipes!()}};
@@ -361,11 +401,41 @@ export class GatewayApi {
         await this.sessions.deleteSession!(decodeURIComponent(sessionMatch[1]));
         return {statusCode: 204, body: null};
       }
+      if (this.brewfather && request.method === 'DELETE' && path === '/api/v1/brewfather/credentials') {
+        await this.brewfather.clear(); return {statusCode: 204, body: null};
+      }
       if (request.method !== 'POST') {
         return {statusCode: 404, body: {error: 'not_found'}};
       }
 
       const body = parseBody(request.body);
+      if (this.brewfather && path === '/api/v1/brewfather/test-connection') {
+        if (typeof body.userId !== 'string' || typeof body.apiKey !== 'string') throw new Error('Brewfather User ID and API Key are required');
+        return {statusCode: 200, body: await this.brewfather.test(body.userId, body.apiKey)};
+      }
+      if (this.brewfather && path === '/api/v1/brewfather/credentials') {
+        if (typeof body.userId !== 'string' || typeof body.apiKey !== 'string') throw new Error('Brewfather User ID and API Key are required');
+        return {statusCode: 200, body: await this.brewfather.save(body.userId, body.apiKey)};
+      }
+      if (this.brewfather && path === '/api/v1/brewfather/batches' && request.method === 'POST') {
+        return {statusCode: 200, body: {batches: await this.sessions?.listBrewfatherBatches?.() ?? []}};
+      }
+      if (this.brewfather && request.method === 'POST' && brewfatherImportMatch) {
+        const id = decodeURIComponent(brewfatherImportMatch[1]);
+        const raw = await this.brewfather.get(`/batches/${encodeURIComponent(id)}`);
+        const mapped = mapBrewfatherBatch(raw);
+        const cached = await this.sessions?.saveBrewfatherBatch?.(mapped);
+        const recipe = await this.sessions?.saveRecipe?.(mapped.recipe);
+        return {statusCode: 201, body: {batch: cached ?? mapped, recipe}};
+      }
+      if (this.brewfather && request.method === 'POST' && brewfatherStartMatch) {
+        const id = decodeURIComponent(brewfatherStartMatch[1]);
+        const cached = await this.sessions?.getBrewfatherBatch?.(id) as any;
+        if (!cached) throw new Error('Brewfather batch must be imported before starting a local session');
+        const recipe = cached.recipe as Recipe;
+        const name = typeof body.name === 'string' ? body.name : cached.name;
+        return {statusCode: 201, body: {session: await this.sessions?.start(name, null, recipe, id)}};
+      }
       if (this.sessions && path === '/api/v1/recipes') {
         return {statusCode: 201, body: {recipe: await this.sessions.saveRecipe!(recipePayload(body))}};
       }

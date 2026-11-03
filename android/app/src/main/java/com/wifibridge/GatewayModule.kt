@@ -28,6 +28,8 @@ class GatewayModule(
   private var listenerCount = 0
   private val sessionStoreDelegate = lazy { BrewSessionStore(reactContext.applicationContext) }
   private val sessionStore by sessionStoreDelegate
+  private val brewfatherStore by lazy { BrewfatherSecureStore(reactContext.applicationContext) }
+  private val brewfatherClient by lazy { BrewfatherClient() }
 
   private data class NetworkDiagnostics(
     val ip: String?,
@@ -106,6 +108,58 @@ class GatewayModule(
   @ReactMethod
   fun getGatewayServiceStatus(promise: Promise) {
     promise.resolve(serviceStatusMap())
+  }
+
+  @ReactMethod
+  fun brewfatherStatus(promise: Promise) {
+    promise.resolve(Arguments.createMap().apply { putBoolean("configured", brewfatherStore.hasCredentials()) })
+  }
+
+  @ReactMethod
+  fun testBrewfatherCredentials(userId: String, apiKey: String, promise: Promise) {
+    runBrewfather(promise) {
+      val cleanUserId = userId.trim()
+      val cleanApiKey = apiKey.trim()
+      if (cleanUserId.isBlank() || cleanApiKey.isBlank()) throw IllegalArgumentException("Brewfather User ID and API Key are required")
+      brewfatherClient.get("/batches?limit=1", BrewfatherCredentials(cleanUserId, cleanApiKey))
+      Arguments.createMap().apply { putBoolean("connected", true) }
+    }
+  }
+
+  @ReactMethod
+  fun saveBrewfatherCredentials(userId: String, apiKey: String, promise: Promise) {
+    runBrewfather(promise) {
+      val credentials = BrewfatherCredentials(userId.trim(), apiKey.trim())
+      if (credentials.userId.isBlank() || credentials.apiKey.isBlank()) throw IllegalArgumentException("Brewfather User ID and API Key are required")
+      brewfatherClient.get("/batches?limit=1", credentials)
+      brewfatherStore.save(credentials)
+      Arguments.createMap().apply { putBoolean("configured", true) }
+    }
+  }
+
+  @ReactMethod
+  fun clearBrewfatherCredentials(promise: Promise) {
+    brewfatherStore.clear()
+    promise.resolve(null)
+  }
+
+  @ReactMethod
+  fun brewfatherGet(path: String, promise: Promise) {
+    runBrewfather(promise) {
+      val credentials = brewfatherStore.read() ?: throw IllegalStateException("Brewfather credentials are not configured")
+      val cleanPath = path.trim()
+      if (!cleanPath.startsWith("/batches") && !cleanPath.startsWith("/recipes")) throw IllegalArgumentException("Unsupported Brewfather endpoint")
+      val response = brewfatherClient.get(cleanPath, credentials)
+      response.body
+    }
+  }
+
+  private fun <T> runBrewfather(promise: Promise, action: () -> T) {
+    Thread {
+      try { promise.resolve(action()) }
+      catch (error: BrewfatherApiException) { promise.reject("brewfather_http_${error.code}", error.message, error) }
+      catch (error: Exception) { promise.reject("brewfather_request_failed", error.message ?: "Brewfather request failed", error) }
+    }.start()
   }
 
   @ReactMethod

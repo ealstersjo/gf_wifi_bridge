@@ -360,6 +360,34 @@ button:disabled { color: var(--text-muted); border-color: var(--line); backgroun
 .settings-card { padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
 .settings-card strong { color: var(--text); }
 .settings-card p { margin: 7px 0 0; color: var(--text-muted); font-size: .78rem; line-height: 1.5; }
+.brewfather-view { display: grid; gap: 18px; padding-top: 4px; }
+.brewfather-connect-card { max-width: 760px; }
+.brewfather-connect-card h2 { margin-top: 0; }
+.brewfather-form { display: grid; grid-template-columns: 1fr 1fr auto; align-items: end; gap: 12px; margin: 18px 0 12px; }
+.brewfather-form label { display: grid; gap: 6px; color: var(--text-muted); font-size: .72rem; font-weight: 700; }
+.brewfather-form input, .brewfather-toolbar input, .brewfather-toolbar select { min-height: 38px; border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; color: var(--text); background: var(--surface-soft); }
+.brewfather-actions, .brewfather-detail-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.brewfather-toolbar { display: flex; gap: 10px; margin-bottom: 12px; }
+.brewfather-toolbar input { flex: 1; min-width: 0; }
+.brewfather-batch-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.brewfather-batch-card { display: grid; gap: 5px; min-width: 0; border: 1px solid var(--line); border-radius: 14px; padding: 15px; color: var(--text); background: var(--surface-soft); text-align: left; }
+.brewfather-batch-card:hover { border-color: var(--accent-primary); background: var(--accent-light); }
+.brewfather-batch-card strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brewfather-batch-card span, .brewfather-batch-card small { color: var(--text-muted); font-size: .7rem; }
+.brewfather-batch-status { color: var(--accent-primary) !important; font-weight: 750; text-transform: uppercase; letter-spacing: .05em; }
+.brewfather-detail-actions { margin-bottom: 18px; }
+.brewfather-detail-actions .section-note { flex: 1 1 260px; }
+.brewfather-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+.brewfather-metric { display: grid; gap: 5px; padding: 12px; border-radius: 12px; background: var(--surface-soft); }
+.brewfather-metric span { color: var(--text-muted); font-size: .68rem; }
+.brewfather-metric strong { color: var(--text); font-size: .9rem; }
+.brewfather-detail-section { margin-top: 20px; }
+.brewfather-detail-section h3 { margin: 0 0 9px; color: var(--text); font-size: .86rem; }
+.brewfather-table-wrap { overflow-x: auto; }
+.brewfather-table { width: 100%; border-collapse: collapse; font-size: .74rem; }
+.brewfather-table th, .brewfather-table td { padding: 9px 8px; border-bottom: 1px solid var(--line-soft); text-align: left; white-space: nowrap; }
+.brewfather-table th { color: var(--text-muted); font-size: .66rem; text-transform: uppercase; letter-spacing: .04em; }
+.brewfather-notes { margin: 0; color: var(--text-muted); line-height: 1.55; white-space: pre-wrap; }
 .diagnostics-heading { margin: 0; }
 .error-catalog { padding: 20px; }
 .error-catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -390,6 +418,7 @@ footer { border-top: 0; color: var(--text-muted); }
   .mobile-brand { display: block; }
   .identity strong { display: none; }
   .error-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brewfather-batch-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .connection-actions { width: 100%; margin-left: 0; }
@@ -401,4 +430,7 @@ footer { border-top: 0; color: var(--text-muted); }
   .debug-toolbar { justify-content: flex-start; }
   .error-catalog-grid { grid-template-columns: 1fr; }
   .settings-grid { grid-template-columns: 1fr; }
+  .brewfather-form, .brewfather-toolbar { grid-template-columns: 1fr; display: grid; }
+  .brewfather-batch-list { grid-template-columns: 1fr; }
+  .brewfather-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

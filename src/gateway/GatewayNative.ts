@@ -37,6 +37,11 @@ interface GatewayServerModule {
   startGatewayService(): Promise<NativeGatewayServiceStatus>;
   stopGatewayService(): Promise<void>;
   getGatewayServiceStatus(): Promise<NativeGatewayServiceStatus>;
+  brewfatherStatus(): Promise<{configured: boolean}>;
+  testBrewfatherCredentials(userId: string, apiKey: string): Promise<{connected: boolean}>;
+  saveBrewfatherCredentials(userId: string, apiKey: string): Promise<{configured: boolean}>;
+  clearBrewfatherCredentials(): Promise<void>;
+  brewfatherGet(path: string): Promise<string>;
   sessionStore(operation: string, payloadJson: string): Promise<string>;
   addListener(eventName: string): void;
   removeListeners(count: number): void;
@@ -52,7 +57,7 @@ async function storeCall<T>(operation: string, payload: Record<string, unknown> 
 
 export const NativeSessionStore: SessionStore = {
   getActiveSession: () => storeCall<BrewSession | null>('getActive'),
-  createSession: (name, startedAt, recipeId = null, recipeSnapshot = null) => storeCall<BrewSession>('createSession', {name, startedAt, recipeId, recipeSnapshot}),
+  createSession: (name, startedAt, recipeId = null, recipeSnapshot = null, brewfatherBatchId = null) => storeCall<BrewSession>('createSession', {name, startedAt, recipeId, recipeSnapshot, brewfatherBatchId}),
   endSession: (id, endedAt) => storeCall<BrewSession>('endSession', {id, endedAt}),
   listSessions: () => storeCall<BrewSession[]>('listSessions'),
   getSession: id => storeCall<BrewSession | null>('getSession', {id}),
@@ -67,6 +72,9 @@ export const NativeSessionStore: SessionStore = {
   deleteRecipe: id => storeCall<void>('deleteRecipe', {id}),
   deleteSession: id => storeCall<void>('deleteSession', {id}),
   updateActualValues: (id, actual: SessionActualValues) => storeCall<BrewSession>('updateActualValues', {id, actual}),
+  listBrewfatherBatches: () => storeCall<any[]>('listBrewfatherBatches'),
+  getBrewfatherBatch: id => storeCall<any | null>('getBrewfatherBatch', {id}),
+  saveBrewfatherBatch: batch => storeCall<any>('saveBrewfatherBatch', {batch}),
 };
 
 export const GatewayNative = {
@@ -76,6 +84,11 @@ export const GatewayNative = {
   startGatewayService: (): Promise<NativeGatewayServiceStatus> => server.startGatewayService(),
   stopGatewayService: (): Promise<void> => server.stopGatewayService(),
   getGatewayServiceStatus: (): Promise<NativeGatewayServiceStatus> => server.getGatewayServiceStatus(),
+  brewfatherStatus: (): Promise<{configured: boolean}> => server.brewfatherStatus(),
+  testBrewfatherCredentials: (userId: string, apiKey: string): Promise<{connected: boolean}> => server.testBrewfatherCredentials(userId, apiKey),
+  saveBrewfatherCredentials: (userId: string, apiKey: string): Promise<{configured: boolean}> => server.saveBrewfatherCredentials(userId, apiKey),
+  clearBrewfatherCredentials: (): Promise<void> => server.clearBrewfatherCredentials(),
+  brewfatherGet: (path: string): Promise<string> => server.brewfatherGet(path),
   updateSnapshot: (snapshot: Record<string, unknown>): void =>
     server.updateSnapshot(JSON.stringify(snapshot)),
   respond: (

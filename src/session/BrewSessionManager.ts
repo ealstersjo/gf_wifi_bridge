@@ -53,12 +53,12 @@ export class BrewSessionManager {
     };
   }
 
-  async start(name: string | null, observation: SessionObservation, now = new Date(), recipe: Recipe | null = null): Promise<BrewSession> {
+  async start(name: string | null, observation: SessionObservation, now = new Date(), recipe: Recipe | null = null, brewfatherBatchId: string | null = null): Promise<BrewSession> {
     if (this.active) throw new Error('A brew session is already active');
     const cleanName = name?.trim() || null;
     if (cleanName && cleanName.length > 120) throw new Error('Session name must be 120 characters or fewer');
     const recipeSnapshot = recipe ? JSON.parse(JSON.stringify(recipe)) as Recipe : null;
-    this.active = await this.store.createSession(cleanName, now.toISOString(), recipeSnapshot?.id ?? null, recipeSnapshot);
+    this.active = await this.store.createSession(cleanName, now.toISOString(), recipeSnapshot?.id ?? null, recipeSnapshot, brewfatherBatchId);
     this.previous = observation;
     this.samples = [];
     this.recentEvents = [];
@@ -174,6 +174,13 @@ export class BrewSessionManager {
   }
   async markPhase(id: string, phase: string, now = new Date()): Promise<BrewEvent> {
     return this.store.insertEvent({sessionId: id, timestamp: now.toISOString(), type: 'MANUAL_PHASE_MARKER', source: 'WEB', payload: {phase, manual: true}});
+  }
+
+  async listBrewfatherBatches(): Promise<unknown[]> { return this.store.listBrewfatherBatches?.() ?? []; }
+  async getBrewfatherBatch(id: string): Promise<unknown | null> { return this.store.getBrewfatherBatch?.(id) ?? null; }
+  async saveBrewfatherBatch(batch: unknown): Promise<unknown> {
+    if (!this.store.saveBrewfatherBatch) throw new Error('Brewfather batch storage unavailable');
+    return this.store.saveBrewfatherBatch(batch);
   }
 
   private async sampleIfDue(observation: SessionObservation, now: Date, force = false): Promise<void> {

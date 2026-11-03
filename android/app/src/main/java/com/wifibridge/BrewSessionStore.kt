@@ -9,7 +9,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessions.db", null, 5) {
+class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessions.db", null, 6) {
   override fun onConfigure(db: SQLiteDatabase) {
     db.setForeignKeyConstraintsEnabled(true)
   }
@@ -42,6 +42,12 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
       source TEXT, source_recipe_id TEXT, source_format TEXT, source_imported_at TEXT, original_recipe_data_json TEXT, normalized_recipe_json TEXT
     )""")
     db.execSQL("CREATE INDEX recipes_updated ON recipes(updated_at)")
+    db.execSQL("""CREATE TABLE brewfather_batches (
+      local_id TEXT PRIMARY KEY, brewfather_batch_id TEXT NOT NULL UNIQUE, brewfather_recipe_id TEXT,
+      batch_number TEXT, name TEXT NOT NULL, status TEXT, brew_date TEXT, imported_at TEXT NOT NULL,
+      last_synced_at TEXT NOT NULL, recipe_snapshot_json TEXT NOT NULL, original_batch_json TEXT NOT NULL
+    )""")
+    db.execSQL("CREATE INDEX brewfather_batches_updated ON brewfather_batches(last_synced_at)")
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN recipe_id TEXT")
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN recipe_snapshot_json TEXT")
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN planned_batch_volume_l REAL")
@@ -50,6 +56,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN actual_mash_water_volume_l REAL")
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN actual_pre_boil_volume_l REAL")
     db.execSQL("ALTER TABLE brew_sessions ADD COLUMN actual_batch_volume_l REAL")
+    db.execSQL("ALTER TABLE brew_sessions ADD COLUMN brewfather_batch_id TEXT")
   }
 
   override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -72,6 +79,15 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
     if (oldVersion < 3) listOf("source TEXT", "source_recipe_id TEXT", "source_format TEXT", "source_imported_at TEXT", "original_recipe_data_json TEXT").forEach { column -> db.execSQL("ALTER TABLE recipes ADD COLUMN $column") }
     if (oldVersion < 4) db.execSQL("ALTER TABLE recipes ADD COLUMN normalized_recipe_json TEXT")
     if (oldVersion < 5) db.execSQL("ALTER TABLE telemetry_samples ADD COLUMN heater_control_mode TEXT")
+    if (oldVersion < 6) {
+      db.execSQL("ALTER TABLE brew_sessions ADD COLUMN brewfather_batch_id TEXT")
+      db.execSQL("""CREATE TABLE IF NOT EXISTS brewfather_batches (
+        local_id TEXT PRIMARY KEY, brewfather_batch_id TEXT NOT NULL UNIQUE, brewfather_recipe_id TEXT,
+        batch_number TEXT, name TEXT NOT NULL, status TEXT, brew_date TEXT, imported_at TEXT NOT NULL,
+        last_synced_at TEXT NOT NULL, recipe_snapshot_json TEXT NOT NULL, original_batch_json TEXT NOT NULL
+      )""")
+      db.execSQL("CREATE INDEX IF NOT EXISTS brewfather_batches_updated ON brewfather_batches(last_synced_at)")
+    }
   }
 
   fun execute(operation: String, payload: JSONObject): String {
@@ -92,6 +108,9 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
       "deleteRecipe" -> deleteRecipe(payload)
       "deleteSession" -> deleteSession(payload)
       "updateActualValues" -> updateActualValues(payload)
+      "listBrewfatherBatches" -> listBrewfatherBatches()
+      "getBrewfatherBatch" -> queryOne("SELECT * FROM brewfather_batches WHERE brewfather_batch_id=?", arrayOf(payload.getString("id")), ::brewfatherBatchJson) ?: JSONObject.NULL
+      "saveBrewfatherBatch" -> saveBrewfatherBatch(payload)
       else -> throw IllegalArgumentException("Unknown session-store operation")
     }
     return if (result === JSONObject.NULL) "null" else result.toString()
@@ -106,6 +125,7 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
       putNull("ended_at")
       put("status", "ACTIVE")
       if (payload.isNull("recipeId")) putNull("recipe_id") else put("recipe_id", payload.getString("recipeId"))
+      if (payload.isNull("brewfatherBatchId")) putNull("brewfather_batch_id") else put("brewfather_batch_id", payload.getString("brewfatherBatchId"))
       if (payload.isNull("recipeSnapshot")) putNull("recipe_snapshot_json") else put("recipe_snapshot_json", payload.getJSONObject("recipeSnapshot").toString())
       putNullableDouble("planned_batch_volume_l", payload.optJSONObject("recipeSnapshot"), "plannedBatchVolumeL")
       putNullableDouble("planned_pre_boil_volume_l", payload.optJSONObject("recipeSnapshot"), "plannedPreBoilVolumeL")
@@ -166,6 +186,25 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
   )
 
   private fun listRecipes(): JSONArray = queryMany("SELECT * FROM recipes ORDER BY updated_at DESC", emptyArray(), ::recipeJson)
+
+  private fun listBrewfatherBatches(): JSONArray = queryMany("SELECT * FROM brewfather_batches ORDER BY COALESCE(brew_date, last_synced_at) DESC", emptyArray(), ::brewfatherBatchJson)
+
+  private fun saveBrewfatherBatch(payload: JSONObject): JSONObject {
+    val batch = payload.getJSONObject("batch")
+    val values = ContentValues().apply {
+      put("local_id", batch.optString("localId").ifBlank { UUID.randomUUID().toString() })
+      put("brewfather_batch_id", batch.getString("id"))
+      if (batch.isNull("recipeId")) putNull("brewfather_recipe_id") else put("brewfather_recipe_id", batch.getString("recipeId"))
+      if (batch.isNull("batchNo")) putNull("batch_number") else put("batch_number", batch.optString("batchNo"))
+      put("name", batch.optString("name").ifBlank { "Unnamed batch" })
+      if (batch.isNull("status")) putNull("status") else put("status", batch.getString("status"))
+      if (batch.isNull("brewDate")) putNull("brew_date") else put("brew_date", batch.getString("brewDate"))
+      put("imported_at", batch.optString("importedAt")); put("last_synced_at", batch.optString("lastSyncedAt"))
+      put("recipe_snapshot_json", batch.getJSONObject("recipe").toString()); put("original_batch_json", batch.get("originalBatchJson").toString())
+    }
+    writableDatabase.insertWithOnConflict("brewfather_batches", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    return queryOne("SELECT * FROM brewfather_batches WHERE brewfather_batch_id=?", arrayOf(batch.getString("id")), ::brewfatherBatchJson)!!
+  }
 
   private fun saveRecipe(payload: JSONObject): JSONObject {
     val now = payload.optString("updatedAt").ifBlank { java.time.Instant.now().toString() }
@@ -238,10 +277,14 @@ class BrewSessionStore(context: Context) : SQLiteOpenHelper(context, "brew_sessi
     put("id", cursor.string("id")); put("name", cursor.nullableString("name"))
     put("startedAt", cursor.string("started_at")); put("endedAt", cursor.nullableString("ended_at"))
     put("status", cursor.string("status"))
-    put("recipeId", cursor.nullableString("recipe_id")); put("recipeSnapshot", cursor.nullableJson("recipe_snapshot_json"))
+    put("recipeId", cursor.nullableString("recipe_id")); put("brewfatherBatchId", cursor.nullableString("brewfather_batch_id")); put("recipeSnapshot", cursor.nullableJson("recipe_snapshot_json"))
     put("plannedBatchVolumeL", cursor.nullableDouble("planned_batch_volume_l")); put("plannedPreBoilVolumeL", cursor.nullableDouble("planned_pre_boil_volume_l")); put("grainWeightKg", cursor.nullableDouble("grain_weight_kg"))
     put("actual", JSONObject().apply { put("mashWaterVolumeL", cursor.nullableDouble("actual_mash_water_volume_l")); put("preBoilVolumeL", cursor.nullableDouble("actual_pre_boil_volume_l")); put("batchVolumeL", cursor.nullableDouble("actual_batch_volume_l")) })
     put("currentPhase", "UNKNOWN")
+  }
+  private fun brewfatherBatchJson(cursor: Cursor) = JSONObject().apply {
+    val recipe = cursor.nullableJson("recipe_snapshot_json") as? JSONObject
+    put("localId", cursor.string("local_id")); put("id", cursor.string("brewfather_batch_id")); put("recipeId", cursor.nullableString("brewfather_recipe_id")); put("batchNo", cursor.nullableString("batch_number")); put("name", cursor.string("name")); put("recipeName", recipe?.optString("name").takeUnless { it.isNullOrBlank() }); put("style", recipe?.optString("style").takeUnless { it.isNullOrBlank() }); put("batchVolumeL", recipe?.optDouble("plannedBatchVolumeL", Double.NaN)?.takeUnless { it.isNaN() }); put("status", cursor.nullableString("status")); put("brewDate", cursor.nullableString("brew_date")); put("importedAt", cursor.string("imported_at")); put("lastSyncedAt", cursor.string("last_synced_at")); put("recipe", recipe ?: JSONObject.NULL); put("originalBatchJson", cursor.nullableJson("original_batch_json"))
   }
   private fun recipeJson(cursor: Cursor) = JSONObject().apply {
     put("id", cursor.string("id")); put("name", cursor.string("name")); put("style", cursor.nullableString("style")); put("notes", cursor.nullableString("notes"))

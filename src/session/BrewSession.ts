@@ -137,6 +137,7 @@ export interface BrewSession {
   endedAt: string | null;
   status: BrewSessionStatus;
   recipeId?: RecipeId | null;
+  brewfatherBatchId?: string | null;
   recipeSnapshot?: Recipe | null;
   plannedBatchVolumeL?: number | null;
   plannedPreBoilVolumeL?: number | null;
@@ -186,7 +187,7 @@ export interface SessionLiveState {
 
 export interface SessionStore {
   getActiveSession(): Promise<BrewSession | null>;
-  createSession(name: string | null, startedAt: string, recipeId?: RecipeId | null, recipeSnapshot?: Recipe | null): Promise<BrewSession>;
+  createSession(name: string | null, startedAt: string, recipeId?: RecipeId | null, recipeSnapshot?: Recipe | null, brewfatherBatchId?: string | null): Promise<BrewSession>;
   endSession(id: string, endedAt: string): Promise<BrewSession>;
   listSessions(): Promise<BrewSession[]>;
   getSession(id: string): Promise<BrewSession | null>;
@@ -201,6 +202,9 @@ export interface SessionStore {
   deleteRecipe?(id: RecipeId): Promise<void>;
   deleteSession?(id: string): Promise<void>;
   updateActualValues?(id: string, actual: SessionActualValues): Promise<BrewSession>;
+  listBrewfatherBatches?(): Promise<unknown[]>;
+  getBrewfatherBatch?(id: string): Promise<unknown | null>;
+  saveBrewfatherBatch?(batch: unknown): Promise<unknown>;
 }
 
 export interface CreateSessionInput {
