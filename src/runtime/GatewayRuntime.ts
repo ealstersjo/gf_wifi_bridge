@@ -45,7 +45,7 @@ class GatewayRuntimeOwner {
   private state: GatewayUiState = {
     connectionState: 'DISCONNECTED', bluetoothState: State.Unknown, devices: [],
     grainfatherState: EMPTY_GRAINFATHER_STATE, rssi: null, commandStatus: {state: 'IDLE'},
-    debugEvents: [], gatewayStatus: {running: false, port: 8080, localIp: null, webSocketClients: 0, serviceRunning: false, serviceStartedAt: 0},
+    debugEvents: [], gatewayStatus: {running: false, port: 8080, localIp: null, localInterface: null, localAddresses: [], networkTransport: null, networkValidated: false, mdnsHost: null, webSocketClients: 0, serviceRunning: false, serviceStartedAt: 0},
     sessionLive: initialSession, now: Date.now(),
   };
   private listeners = new Set<(state: GatewayUiState) => void>();

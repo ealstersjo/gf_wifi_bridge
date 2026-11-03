@@ -60,6 +60,13 @@ available even when the G30 is disconnected. WebSocket clients receive one
 snapshot immediately and subsequent changed snapshots. Normal use is
 same-origin and the server does not send a permissive CORS header.
 
+The gateway also advertises `GF-Gateway.local` with mDNS while the foreground
+service is running. Prefer `http://gf-gateway.local:8080` as a bookmark; the
+current IPv4 address remains visible as a fallback and the Android Gateway card
+shows the active interface, all addresses, network validation state, and a
+local health-test button. mDNS and direct HTTP access require the browser device
+to be on the same LAN; guest-network client isolation can still block both.
+
 WebSocket transport liveness is independent of G30 connection and telemetry
 freshness. The server sends an RFC 6455 ping every 10 seconds; browsers answer
 with pong frames automatically, and a 30-second socket read watchdog detects a

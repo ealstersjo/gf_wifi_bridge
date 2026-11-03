@@ -11,6 +11,11 @@ export interface NativeGatewayStatus {
   running: boolean;
   port: number;
   localIp: string | null;
+  localInterface: string | null;
+  localAddresses: string[];
+  networkTransport: string | null;
+  networkValidated: boolean;
+  mdnsHost: string | null;
   webSocketClients: number;
   serviceRunning: boolean;
   serviceStartedAt: number;

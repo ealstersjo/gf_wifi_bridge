@@ -113,6 +113,7 @@ export function HomeScreen(): React.JSX.Element {
   const [timerMinutes, setTimerMinutes] = useState('2');
   const [delayHours, setDelayHours] = useState('0');
   const [delayMinutes, setDelayMinutes] = useState('5');
+  const [gatewayHealth, setGatewayHealth] = useState<string | null>(null);
   useEffect(() => GatewayRuntime.subscribe(setRuntimeState), []);
   const {
     connectionState, connectionDetail, bluetoothState, devices,
@@ -143,6 +144,20 @@ export function HomeScreen(): React.JSX.Element {
     command?.catch(() => {
       // Command failures are surfaced through onCommandStatus.
     });
+  };
+  const testGateway = async (): Promise<void> => {
+    if (!gatewayStatus.localIp) {
+      setGatewayHealth('No active LAN IPv4 address');
+      return;
+    }
+    setGatewayHealth('Testing…');
+    try {
+      const response = await fetch(`http://${gatewayStatus.localIp}:${gatewayStatus.port}/api/v1/health`);
+      const body = await response.text();
+      setGatewayHealth(response.ok ? `HTTP ${response.status}: ${body}` : `HTTP ${response.status}`);
+    } catch (error) {
+      setGatewayHealth(`Failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   return (
@@ -192,15 +207,26 @@ export function HomeScreen(): React.JSX.Element {
           <Text style={styles.secondary}>
             Local IP: {gatewayStatus.localIp ?? 'not connected to LAN'}
           </Text>
+          <Text style={styles.secondary}>
+            Interface: {gatewayStatus.localInterface ?? 'unknown'} · {gatewayStatus.networkTransport ?? 'unknown'} · {gatewayStatus.networkValidated ? 'validated' : 'not validated'}
+          </Text>
+          <Text style={styles.secondary}>
+            Addresses: {gatewayStatus.localAddresses?.join(', ') || 'none'}
+          </Text>
           <Text style={styles.secondary} selectable>
             Open in browser:{' '}
-            {gatewayStatus.localIp
-              ? `http://${gatewayStatus.localIp}:${gatewayStatus.port}`
+            {gatewayStatus.mdnsHost
+              ? `http://${gatewayStatus.mdnsHost}:${gatewayStatus.port}`
+              : gatewayStatus.localIp
+                ? `http://${gatewayStatus.localIp}:${gatewayStatus.port}`
               : 'waiting for local IPv4 address'}
           </Text>
+          {gatewayStatus.mdnsHost ? <Text style={styles.secondary}>IP fallback: http://{gatewayStatus.localIp}:{gatewayStatus.port}</Text> : null}
           <Text style={styles.secondary}>
             WebSocket clients: {gatewayStatus.webSocketClients}
           </Text>
+          <Button title="TEST LOCAL GATEWAY" disabled={!gatewayStatus.running} onPress={() => testGateway().catch(() => {})} />
+          {gatewayHealth ? <Text style={styles.secondary} selectable>{gatewayHealth}</Text> : null}
           <Text style={styles.secondary}>
             For a dedicated gateway, exclude this app from battery optimization in Android settings.
           </Text>
