@@ -256,13 +256,14 @@ export class GrainfatherConnection {
     this.callbacks.onStatus(this.latestState);
     this.callbacks.onConnectionState('CONNECTING');
     this.log(reconnecting ? 'RECONNECT' : 'G30', `Connecting to ${deviceId}`);
+    const startedAt = Date.now();
     try {
       const device = await this.ble.connect(deviceId);
       if (await this.abortConnectedDeviceAfterManualDisconnect(device)) return;
       this.connectedDevice = device;
       this.callbacks.onConnectionState('CONNECTED');
       this.callbacks.onRssi(device.rssi);
-      this.log('G30', `Connected to ${device.name ?? device.id}`);
+      this.log('G30', `Connected to ${device.name ?? device.id} in ${Date.now() - startedAt} ms`);
       await this.logGattDatabase(device);
       if (await this.abortConnectedDeviceAfterManualDisconnect(device)) return;
       await this.subscribeToStatus(device);
@@ -277,7 +278,11 @@ export class GrainfatherConnection {
       if (this.manualDisconnect) return;
       const message = error instanceof Error ? error.message : String(error);
       this.callbacks.onConnectionState('ERROR', message);
-      this.log(reconnecting ? 'RECONNECT' : 'G30', `Connection failed: ${message}`);
+      const timeoutHint = /timeout|timed out/i.test(message) ? ' (timeout)' : '';
+      this.log(
+        reconnecting ? 'RECONNECT' : 'G30',
+        `Connection failed after ${Date.now() - startedAt} ms${timeoutHint}: ${message}`,
+      );
       if (reconnecting) {
         this.scheduleReconnect(deviceId);
       }
