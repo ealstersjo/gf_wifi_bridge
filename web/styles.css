@@ -353,6 +353,20 @@ button:disabled { color: var(--text-muted); border-color: var(--line); backgroun
 .lower-workspace { gap: 18px; padding: 0 0 22px; }
 .data-tools { gap: 18px; padding-bottom: 22px; }
 .debug-region { margin-bottom: 20px; }
+.diagnostics-view { display: grid; gap: 18px; padding-top: 4px; scroll-margin-top: 20px; }
+.diagnostics-heading { margin: 0; }
+.error-catalog { padding: 20px; }
+.error-catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.error-catalog-item { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.error-catalog-item strong { display: block; margin-top: 8px; color: var(--text); font-size: .82rem; }
+.error-catalog-item p { margin: 6px 0; color: var(--text-muted); font-size: .72rem; line-height: 1.45; }
+.error-catalog-item small { color: var(--text-muted); font-size: .68rem; line-height: 1.4; }
+.error-source { display: inline-flex; padding: 4px 7px; border-radius: 999px; font-size: .6rem; font-weight: 750; letter-spacing: .05em; }
+.source-g30 { color: var(--green); background: var(--accent-light); }
+.source-android { color: #866114; background: #fff3d9; }
+.source-web { color: #496298; background: #eaf0ff; }
+body[data-theme="dark"] .source-android { color: #f0c875; background: #463719; }
+body[data-theme="dark"] .source-web { color: #a9c0ff; background: #273655; }
 .message, .temperature-alert { border-radius: 12px; box-shadow: var(--shadow-card); }
 footer { border-top: 0; color: var(--text-muted); }
 
@@ -369,6 +383,7 @@ footer { border-top: 0; color: var(--text-muted); }
   .app-bar { min-height: 60px; }
   .mobile-brand { display: block; }
   .identity strong { display: none; }
+  .error-catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {
   .connection-actions { width: 100%; margin-left: 0; }
@@ -378,4 +393,5 @@ footer { border-top: 0; color: var(--text-muted); }
   .instrument { border-radius: 15px; }
   .graph-region { min-height: 0; }
   .debug-toolbar { justify-content: flex-start; }
+  .error-catalog-grid { grid-template-columns: 1fr; }
 }

@@ -17,7 +17,7 @@
     "session-active", "session-name", "session-start", "session-title",
     "session-runtime", "session-end", "graph-session-label", "temperature-graph",
     "graph-empty", "graph-grid", "graph-section", "actual-line", "target-line", "session-history", "event-list",
-    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary", "recipes-panel", "debug-panel", "live-title",
+    "session-recipe", "session-phase", "session-plan", "session-summary", "phase-marker", "phase-mark", "recipe-list", "recipe-import", "recipe-preview", "performance-refresh", "performance-summary", "recipes-panel", "diagnostics-view", "debug-panel", "live-title",
     "live-unavailable", "live-instruments", "unavailable-title", "process-unavailable", "process-live",
     "timer-panel", "timer-configure", "timer-config", "timer-active-actions",
     "delay-panel", "delay-configure", "delay-config", "delay-active-actions",
@@ -710,7 +710,7 @@
     button.onclick = () => {
       document.querySelectorAll("[data-nav]").forEach(item => item.classList.toggle("active", item === button));
       const target = button.dataset.nav;
-      const destination = target === "brew-mode" ? elements["live-title"] : target === "recipes" ? elements["recipes-panel"] : target === "sessions" ? elements["session-card"] : target === "statistics" ? elements["performance-summary"] : target === "settings" ? elements["debug-panel"] : elements["live-title"];
+      const destination = target === "brew-mode" ? elements["live-title"] : target === "recipes" ? elements["recipes-panel"] : target === "sessions" ? elements["session-card"] : target === "statistics" ? elements["performance-summary"] : target === "diagnostics" ? elements["diagnostics-view"] : target === "settings" ? elements["gateway-detail"] : elements["live-title"];
       destination?.scrollIntoView({behavior: "smooth", block: "start"});
     };
   });

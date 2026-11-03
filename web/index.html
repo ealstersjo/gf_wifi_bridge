@@ -17,6 +17,7 @@
           <button class="nav-item" type="button" data-nav="recipes"><span>▤</span>Recipes</button>
           <button class="nav-item" type="button" data-nav="sessions"><span>◷</span>Sessions</button>
           <button class="nav-item" type="button" data-nav="statistics"><span>▥</span>Statistics</button>
+          <button class="nav-item" type="button" data-nav="diagnostics"><span>!</span>Diagnostics</button>
           <button class="nav-item" type="button" data-nav="settings"><span>⚙</span>Settings</button>
         </nav>
         <div class="sidebar-footer"><span class="sidebar-dot"></span><span>Local gateway</span></div>
@@ -152,11 +153,34 @@
         </details>
         <section class="work-region statistics-region"><div class="section-heading"><h2>Performance</h2><button id="performance-refresh" class="button-quiet" type="button">Refresh</button></div><div id="performance-summary" class="compact-empty">Complete comparable brews to see your G30's measured performance.</div></section>
       </section>
-      <details id="debug-panel" class="work-region debug-region">
-        <summary><strong>Debug flow</strong><span id="debug-count" class="section-note">0 events</span></summary>
-        <div class="debug-toolbar"><label for="debug-filter">Category</label><select id="debug-filter"><option value="ALL">All categories</option><option value="BLE">BLE</option><option value="G30">G30</option><option value="PROTOCOL">Protocol</option><option value="COMMAND">Command</option><option value="STATE">State</option><option value="RECONNECT">Reconnect</option><option value="SERVICE">Service</option><option value="GATEWAY">Gateway</option><option value="HTTP">HTTP</option><option value="WS">WebSocket</option></select><label for="debug-source">Source</label><select id="debug-source"><option value="ALL">All sources</option><option value="G30">G30</option><option value="ANDROID">Android</option><option value="WEB">Web</option></select><label for="debug-severity">Level</label><select id="debug-severity"><option value="ALL">All levels</option><option value="ERROR">Error</option><option value="WARN">Warning</option><option value="INFO">Info</option><option value="DEBUG">Debug</option></select><input id="debug-search" type="search" placeholder="Search logs" aria-label="Search debug logs" /><button id="debug-pause" class="button-quiet" type="button">Pause</button><button id="debug-copy" class="button-quiet" type="button">Copy</button></div>
-        <div id="debug-list" class="debug-list"><p class="compact-empty">No debug events yet.</p></div>
-      </details>
+      <section id="diagnostics-view" class="diagnostics-view">
+        <div class="section-heading diagnostics-heading"><div><h2>Diagnostics &amp; logs</h2><span class="section-note">Understand whether a problem is in the G30, Android gateway or web connection.</span></div></div>
+        <section class="work-region error-catalog" aria-labelledby="error-catalog-title">
+          <div class="section-heading"><div><h2 id="error-catalog-title">Possible errors</h2><span class="section-note">Reference for errors currently handled by the gateway.</span></div></div>
+          <div class="error-catalog-grid">
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / BLE</span><strong>Bluetooth unavailable</strong><p>Android Bluetooth is off or permission is missing.</p><small>Turn on Bluetooth and grant Nearby devices permission.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / BLE</span><strong>G30 not found</strong><p>No likely Grainfather was found before scan timeout.</p><small>Keep the G30 powered and nearby, then scan again.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / GATT</span><strong>Connection failed</strong><p>Android could not establish or discover the required GATT services.</p><small>Power-cycle the G30 and retry the connection.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / STATE</span><strong>G30 disconnected</strong><p>A command requires a connected and ready Grainfather.</p><small>Connect the G30 before sending a command.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / COMMAND</span><strong>Confirmation timeout</strong><p>A command was written but the controller did not confirm it.</p><small>Check G30 connectivity; the displayed state remains controller-reported.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / COMMAND</span><strong>Command already pending</strong><p>A second command was requested before the previous one was confirmed.</p><small>Wait for the pending/confirmed/failed status to finish.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-g30">G30 / INPUT</span><strong>Invalid target temperature</strong><p>The submitted target is not a valid finite temperature value.</p><small>Enter a numeric value, then apply it again.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-android">ANDROID</span><strong>Gateway internal error</strong><p>The Android runtime, server, storage or service reported an internal failure.</p><small>Check the Android service and inspect the live log details.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-android">ANDROID / API</span><strong>Invalid request</strong><p>The gateway rejected a malformed or unsupported API request.</p><small>Check the live log for the endpoint and validation detail.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-android">ANDROID / API</span><strong>Operation failed</strong><p>A valid operation failed in the gateway or its domain service.</p><small>Retry once and inspect the correlated Android log event.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-android">ANDROID / NETWORK</span><strong>mDNS unavailable</strong><p>The local hostname could not be registered or resolved.</p><small>Use the displayed IP address as fallback and check local-network multicast.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-android">ANDROID / SESSION</span><strong>Session or recipe not found</strong><p>The requested stored session or recipe no longer exists.</p><small>Refresh the list and select an existing item.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-web">WEB / HTTP</span><strong>Gateway request timeout</strong><p>The browser request did not receive a gateway response in time.</p><small>Check gateway service status and the current local URL.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-web">WEB / HTTP</span><strong>Invalid gateway response</strong><p>The browser received a response that was not valid gateway JSON.</p><small>Check the gateway build and inspect the HTTP debug event.</small></article>
+            <article class="error-catalog-item"><span class="error-source source-web">WEB / WEBSOCKET</span><strong>WebSocket reconnecting</strong><p>The browser lost the gateway connection and is retrying.</p><small>G30 state does not cause this; check gateway/network availability.</small></article>
+          </div>
+        </section>
+        <details id="debug-panel" class="work-region debug-region">
+          <summary><strong>Live debug flow</strong><span id="debug-count" class="section-note">0 events</span></summary>
+          <div class="debug-toolbar"><label for="debug-filter">Category</label><select id="debug-filter"><option value="ALL">All categories</option><option value="BLE">BLE</option><option value="G30">G30</option><option value="PROTOCOL">Protocol</option><option value="COMMAND">Command</option><option value="STATE">State</option><option value="RECONNECT">Reconnect</option><option value="SERVICE">Service</option><option value="GATEWAY">Gateway</option><option value="HTTP">HTTP</option><option value="WS">WebSocket</option></select><label for="debug-source">Source</label><select id="debug-source"><option value="ALL">All sources</option><option value="G30">G30</option><option value="ANDROID">Android</option><option value="WEB">Web</option></select><label for="debug-severity">Level</label><select id="debug-severity"><option value="ALL">All levels</option><option value="ERROR">Error</option><option value="WARN">Warning</option><option value="INFO">Info</option><option value="DEBUG">Debug</option></select><input id="debug-search" type="search" placeholder="Search logs" aria-label="Search debug logs" /><button id="debug-pause" class="button-quiet" type="button">Pause</button><button id="debug-copy" class="button-quiet" type="button">Copy</button></div>
+          <div id="debug-list" class="debug-list"><p class="compact-empty">No debug events yet.</p></div>
+        </details>
+      </section>
       <footer><span>Local gateway only · offline dashboard</span></footer>
       </div>
     </main>
