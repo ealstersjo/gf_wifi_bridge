@@ -219,6 +219,7 @@ export class GrainfatherConnection {
       this.stopScan();
       if (!this.connectedDevice) {
         this.callbacks.onConnectionState('DISCONNECTED');
+        this.log('BLE', 'Scan timeout elapsed; no connection established');
       }
       this.log('BLE', 'Scan finished');
     }, 10_000);
@@ -335,6 +336,10 @@ export class GrainfatherConnection {
         this.cancelAutoConnect = null;
         this.stopScan();
         this.callbacks.onConnectionState(state, message);
+        this.log(
+          'BLE',
+          state === 'NOT_FOUND' ? `Scan timeout: ${message}` : `Scan failed: ${message}`,
+        );
         reject(new Error(message));
       };
       this.cancelAutoConnect = reason => finishWithError(reason, 'DISCONNECTED');

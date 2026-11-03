@@ -40,7 +40,9 @@ export class SerializedCommandExecutor {
       return Promise.reject(error);
     }
     if (this.pending) {
-      return Promise.reject(new Error(`Command already pending: ${this.pending.description}`));
+      const error = new Error(`Command already pending: ${this.pending.description}`);
+      this.onStatus({state: 'FAILED', description: spec.description, detail: error.message});
+      return Promise.reject(error);
     }
 
     return new Promise<void>((resolve, reject) => {
